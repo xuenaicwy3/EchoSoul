@@ -78,7 +78,37 @@ class EchoSoulAPI:
         logger.info("收到消息: user=%s, msg=%s", req.user_id[:8], req.message[:30])
         self.scheduler.update_active(req.user_id)
 
-        config: RunnableConfig = {"configurable": {"thread_id": req.user_id}}
+        # ---------- 预处理：解析 [ROLE_SELECT] 消息 ----------
+        preset_role = None
+        preset_greeting = None
+        user_input = req.message
+
+        if user_input.startswith("[ROLE_SELECT]"):
+            preset_role = user_input.replace("[ROLE_SELECT]", "").strip()
+            role = RoleCatalog.get_role(preset_role)
+            preset_greeting = role.greeting
+            user_input = ""
+            logger.info("[Main] 预处理角色选择: %s, 开场白: %s", preset_role, preset_greeting[:20])
+
+        # 从历史状态中恢复角色（使用通用 thread_id 获取最近一次状态，仅用于提取 role_type）
+        try:
+            last = self.agent.graph.get_state({"configurable": {"thread_id": req.user_id}})
+            vals = last.values if last else {}
+            # 测试
+            logger.info("[Main] last.values: %s, last: %s", vals, last)
+        except Exception:
+            vals = {}
+
+        # 确定最终角色：前端传入 > 预处理 > 历史状态
+        # 角色确定优先级：前端请求字段 > [ROLE_SELECT]解析 > 历史状态
+        final_role = req.role_type or preset_role or vals.get("role_type")
+
+        # 为每个角色创建独立的 thread_id，实现对话历史隔离
+        thread_id = f"{req.user_id}:{final_role}" if final_role else req.user_id
+        config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
+        logger.info("[Main] thread_id: %s", thread_id)
+        logger.info("[Main] 初始化历史记录: %s", self.agent.graph.get_state({"configurable": {"thread_id": thread_id}}))
+
         negative_kws = ["不满意", "不认同", "重新说", "换一个", "不想听", "不对"]
 
         if any(kw in req.message for kw in negative_kws):
@@ -89,10 +119,16 @@ class EchoSoulAPI:
             except Exception:
                 vals = {}
 
+            # 重新生成时使用历史角色，若没有则用 final_role
+            regen_role = vals.get("role_type", final_role or "温柔贤淑型")
+            logger.info("[Main] regen_role: %s", regen_role)
+
+            logger.info("[Main] emotion: %s, memory_text: %s",
+                        vals.get("emotion", {"label": "neutral", "score": 0.5}), vals.get("memory_text", ""))
             regen_state: AgentState = {
                 "user_id": req.user_id,
                 "user_input": req.message,
-                "role_type": vals.get("role_type", "温柔贤淑型"),
+                "role_type": regen_role,
                 "emotion": vals.get("emotion", {"label": "neutral", "score": 0.5}),
                 "memory_text": vals.get("memory_text", ""),
                 "final_response": None,
@@ -105,39 +141,13 @@ class EchoSoulAPI:
             final = self.agent.invoke(regen_state, config)
         else:
             # 正常对话流程（含角色选择预处理）
-            # ---------- 预处理：解析 [ROLE_SELECT] 消息（仅用于新会话开场白） ----------
-            preset_role = None
-            preset_greeting = None
-            user_input = req.message
-
-            if user_input.startswith("[ROLE_SELECT]"):
-                # 提取角色类型（例如 "[ROLE_SELECT]日系动漫型" → "日系动漫型"）
-                preset_role = user_input.replace("[ROLE_SELECT]", "").strip()
-                # 获取对应角色的开场白
-                role = RoleCatalog.get_role(preset_role)  # 如果角色不存在会返回默认角色
-                preset_greeting = role.greeting
-                # 清空用户消息，避免在聊天记录中显示指令文本
-                user_input = ""
-                logger.info("[Main] 预处理角色选择: %s, 开场白: %s", preset_role, preset_greeting[:20])
-
-            # 从历史状态中恢复角色（备选）
-            try:
-                last = self.agent.graph.get_state(config)
-                vals = last.values if last else {}
-            except Exception:
-                vals = {}
-
-            # 角色确定优先级：前端请求字段 > [ROLE_SELECT]解析 > 历史状态
-            final_role = req.role_type or preset_role or vals.get("role_type")
-
-            # 构建初始状态：优先使用预设角色，否则保留上次角色
             init_state: AgentState  = {
                 "user_id": req.user_id,
                 "user_input": user_input,
                 "role_type": final_role,
                 "emotion": vals.get("emotion", {}),
                 "memory_text": vals.get("memory_text", ""),
-                "final_response": None,
+                "final_response": preset_greeting,
                 "need_regenerate": False,
                 "regenerate_context": None,
             }

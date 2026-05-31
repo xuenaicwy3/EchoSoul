@@ -213,7 +213,7 @@ class EchoSoulAgent:
          """
         if config is None:
             config = {"configurable": {"thread_id": state.get("user_id", "default")}}
-        logger.info("Agent.invoke 开始, thread_id=%s", config["configurable"]["thread_id"][:8])
+        logger.info("Agent.invoke 开始, thread_id=%s", config["configurable"]["thread_id"])
         result = self.graph.invoke(state, config)
         logger.info("Agent.invoke 结束, 回复长度=%d", len(result.get("final_response", "")))
         return result
