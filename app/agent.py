@@ -100,8 +100,13 @@ class EchoSoulAgent:
     def _memory_node(self, state: AgentState) -> AgentState:
         """节点3：记忆检索"""
         user_msg = state["user_input"]
-        logger.debug("[memory] 检索记忆: %s", user_msg[:50])
-        mem_text = self.memory_svc.retrieve(state["user_id"], user_msg)
+        role_type = state.get("role_type", "温柔贤淑型")  # 获取当前角色
+        logger.info("[memory] 检索记忆: %s", user_msg[:50])
+        mem_text = self.memory_svc.retrieve(
+            user_id= state["user_id"],
+            query=user_msg,
+            role_type=role_type # 传入当前角色
+        )
         logger.info("[memory] 检索到 %d 字符的记忆", len(mem_text))
         state["memory_text"] = mem_text
         return state
@@ -159,8 +164,15 @@ class EchoSoulAgent:
         logger.info("[generate] 回复: %s...", final_text[:50])
 
         # 存储记忆和更新好感度（非重新生成时）
+        # 调用记忆存储
         if not state.get("need_regenerate"):
-            self.memory_svc.store(user_id, user_input, final_text, emotion, role_type)
+            self.memory_svc.store(
+                user_id=state["user_id"],
+                user_msg=state["user_input"],
+                ai_reply=final_text,
+                emotion=emotion,
+                role_type=role_type  # 传入当前角色
+            )
             delta = self.affection_svc.calculate_delta(user_input, final_text, emotion)
             self.affection_svc.update(user_id, role_type, delta)
             logger.debug("[generate] 记忆已存储，好感度已更新")

@@ -4,33 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="386caada-63df-470c-a0c1-925864ae15ee" name="更改" comment="项目README.md更改">
-      <change afterPath="$PROJECT_DIR$/app/affection.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/agent.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/config.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/emotions.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/main.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/memory.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/prompts.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/roles.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/scheduler.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/static_test/index.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/static_test/script.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/static_test/style.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/run.py" afterDir="false" />
+    <list default="true" id="386caada-63df-470c-a0c1-925864ae15ee" name="更改" comment="解决记忆存储问题">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/affection.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/exceptions.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/emotions.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/interfaces.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/memory.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/logging_config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/roles.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scheduler.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/schemas.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/static/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/static/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/static/script.js" beforeDir="false" afterPath="$PROJECT_DIR$/app/static/script.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/static/style.css" beforeDir="false" afterPath="$PROJECT_DIR$/app/static/style.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/agent.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/memory.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/memory.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -69,6 +46,9 @@
   <component name="HighlightingSettingsPerFile">
     <setting file="file://$PROJECT_DIR$/agent.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../../envs/EchoSoul/Lib/site-packages/langchain_openai/chat_models/base.py" root0="SKIP_INSPECTION" />
+  </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="DEPENDENCY_CHECKER_PROBLEMS_TAB" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 2
@@ -212,7 +192,8 @@
       <workItem from="1780132772327" duration="26000" />
       <workItem from="1780132877377" duration="231000" />
       <workItem from="1780136295156" duration="20217000" />
-      <workItem from="1780199936967" duration="12899000" />
+      <workItem from="1780199936967" duration="15405000" />
+      <workItem from="1780216104398" duration="1786000" />
     </task>
     <task id="LOCAL-00001" summary="项目初始化">
       <option name="closed" value="true" />
@@ -238,7 +219,31 @@
       <option name="project" value="LOCAL" />
       <updated>1780034353740</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="AI虚拟陪伴项目-前后端调试成功">
+      <option name="closed" value="true" />
+      <created>1780213719085</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1780213719085</updated>
+    </task>
+    <task id="LOCAL-00005" summary="修改requirements.txt文件">
+      <option name="closed" value="true" />
+      <created>1780213886756</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1780213886756</updated>
+    </task>
+    <task id="LOCAL-00006" summary="解决记忆存储问题">
+      <option name="closed" value="true" />
+      <created>1780215154573</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1780215154573</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -258,7 +263,10 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="项目初始化" />
     <MESSAGE value="项目README.md更改" />
-    <option name="LAST_COMMIT_MESSAGE" value="项目README.md更改" />
+    <MESSAGE value="AI虚拟陪伴项目-前后端调试成功" />
+    <MESSAGE value="修改requirements.txt文件" />
+    <MESSAGE value="解决记忆存储问题" />
+    <option name="LAST_COMMIT_MESSAGE" value="解决记忆存储问题" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
