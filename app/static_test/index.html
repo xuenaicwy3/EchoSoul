@@ -1,0 +1,92 @@
+<!--<!DOCTYPE html>-->
+<!--<html lang="zh-CN">-->
+<!--<head>-->
+<!--  <meta charset="UTF-8">-->
+<!--  <meta name="viewport" content="width=device-width, initial-scale=1.0">-->
+<!--  <title>心流 · 虚拟伴侣</title>-->
+<!--  <link rel="stylesheet" href="/static_test/style.css">-->
+<!--</head>-->
+<!--<body>-->
+<!--<div class="app-container">-->
+<!--  <div class="header">-->
+<!--    <h2>💞 心流 EchoSoul</h2>-->
+<!--    <select class="role-selector" id="roleSelect">-->
+<!--      <option value="">&#45;&#45; 选择陪伴角色 &#45;&#45;</option>-->
+<!--      <option value="日系动漫型">日系动漫 · 小樱</option>-->
+<!--      <option value="高冷御姐型">高冷御姐 · 雪乃</option>-->
+<!--      <option value="傲娇辣妹型">傲娇辣妹 · 凛</option>-->
+<!--      <option value="甜美校花型">甜美校花 · 甜甜</option>-->
+<!--      <option value="软萌可爱型">软萌可爱 · 团子</option>-->
+<!--      <option value="温柔贤淑型">温柔贤淑 · 若兰</option>-->
+<!--    </select>-->
+<!--  </div>-->
+
+<!--  <div class="affection-panel" id="affectionPanel">-->
+<!--    <div class="affection-item">❤️ 亲密度 <span id="intimacy">10</span></div>-->
+<!--    <div class="affection-item">🤝 信任 <span id="trust">10</span></div>-->
+<!--    <div class="affection-item">😄 趣味 <span id="fun">10</span></div>-->
+<!--    <div class="affection-item">🌱 成长 <span id="growth">10</span></div>-->
+<!--    <div class="affection-item">⭐ 等级 <span id="level">0</span></div>-->
+<!--  </div>-->
+
+<!--  <div class="chat-area" id="chatArea"></div>-->
+
+<!--  <div class="input-area">-->
+<!--    <input type="text" id="userInput" placeholder="说点什么吧..." autofocus />-->
+<!--    <button id="sendBtn">发送</button>-->
+<!--  </div>-->
+<!--</div>-->
+
+<!--<script src="/static_test/script.js"></script>-->
+<!--</body>-->
+<!--</html>-->
+
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>心流 · 虚拟伴侣</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <!-- ========== 视图1：首页 ========== -->
+  <div id="homeView" class="view">
+    <div class="home-container">
+      <h1 class="home-title">✨ AI 虚拟陪伴 ✨</h1>
+      <p class="home-subtitle">选择一位角色，开启属于你们的温暖对话</p>
+      <div class="role-cards" id="roleCards"></div>
+    </div>
+  </div>
+
+  <!-- ========== 视图2：聊天界面 ========== -->
+  <div id="chatView" class="view" style="display:none;">
+    <div class="app-container">
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <button id="backBtn" class="back-btn">← 返回</button>
+          <h2>💞 心流</h2>
+          <button id="newChatBtn" title="新建对话">＋</button>
+        </div>
+        <div class="role-list" id="roleList"></div>
+        <div class="sidebar-footer">
+          <small>点击角色开启新对话</small>
+        </div>
+      </aside>
+      <main class="chat-main">
+        <div class="chat-header" id="chatHeader">
+          <span class="active-role-name">选择角色开始聊天</span>
+        </div>
+        <div class="chat-area" id="chatArea"></div>
+        <div class="input-area">
+          <input type="text" id="userInput" placeholder="说点什么吧..." autofocus />
+          <button id="sendBtn">发送</button>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="/static/script.js"></script>
+</body>
+</html>

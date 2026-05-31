@@ -7,3 +7,18 @@ EchoSoul 是一个基于大语言模型的智能陪伴系统，旨在为用户�
 - 🎨 可自定义性格、语气和陪伴风格
 - 📝 支持对话记忆，提供连续、个性化的交流
 - 💬 轻量部署，快速接入
+
+
+
+uvicorn app.main:create_app --factory --host 127.0.0.1 --port 9000 --reload
+
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+
+# 使用清华源安装
+pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+
+# 使用阿里源安装
+pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/
+
+
+New-Item -Path . -Name ".gitignore" -ItemType File -Value ".env`n"
