@@ -23,6 +23,7 @@ from app.models.schemas import ChatRequest, ChatResponse, AffectionResponse, Age
 from app.exceptions import EchoSoulException
 from langchain_core.runnables import RunnableConfig
 from app.roles import RoleCatalog
+from app.chat_history import ChatHistoryManager
 logger = logging.getLogger(__name__)
 
 
@@ -47,10 +48,12 @@ class EchoSoulAPI:
             self.memory_service,
             self.affection_service,
         )
+        self.chat_history = ChatHistoryManager(self.settings.CHROMA_PATH)
         logger.info("所有服务已实例化")
 
         # 静态文件目录将在 build_app 中确定
         self.static_dir: Path | None = None
+
 
     # ---------- 生命周期（调度器启停） ----------
     @asynccontextmanager
@@ -122,9 +125,9 @@ class EchoSoulAPI:
             # 重新生成时使用历史角色，若没有则用 final_role
             regen_role = vals.get("role_type", final_role or "温柔贤淑型")
             logger.info("[Main] regen_role: %s", regen_role)
-
             logger.info("[Main] emotion: %s, memory_text: %s",
                         vals.get("emotion", {"label": "neutral", "score": 0.5}), vals.get("memory_text", ""))
+
             regen_state: AgentState = {
                 "user_id": req.user_id,
                 "user_input": req.message,
@@ -157,6 +160,18 @@ class EchoSoulAPI:
             final = self.agent.invoke(init_state, config)
 
         logger.info("回复: %s", final["final_response"][:30])
+
+        # 在 chat 方法中，return 之前，存储历史之前
+        logger.info("准备存储历史，final_role=%s, msg=%s", final_role, req.message[:30])
+
+        # ---------- 存储聊天历史 ----------
+        # 用户消息（系统指令不存）
+        if not req.message.startswith("[ROLE_SELECT]"):
+            self.chat_history.add_message(req.user_id, final_role, "user", req.message)
+        # 存储 AI 回复
+        if final.get("final_response"):
+            self.chat_history.add_message(req.user_id, final_role, "ai", final["final_response"])
+
         return ChatResponse(
             reply=final["final_response"],
             emotion=final.get("emotion", {}),
@@ -189,6 +204,16 @@ class EchoSoulAPI:
         """主动消息获取接口"""
         msgs = self.scheduler.get_pending(user_id)
         return {"messages": msgs}
+
+    async def get_chat_history(self, user_id: str, role_type: str):
+        """查询指定角色下的聊天历史"""
+        history = self.chat_history.get_history(user_id, role_type)
+        return {"history": history}
+
+    async def delete_chat_history(self, user_id: str, role_type: str):
+        """删除聊天历史"""
+        self.chat_history.delete_history(user_id, role_type)
+        return {"status": "ok"}
 
     # ---------- 构建 FastAPI 应用 ----------
     def build_app(self) -> FastAPI:
@@ -238,8 +263,23 @@ class EchoSoulAPI:
         )
         app.add_api_route("/active_messages/{user_id}", self.get_active_messages, methods=["GET"])
 
+        # 在 build_app 方法内，其他路由注册之后添加
+        app.add_api_route(
+            "/chat_history/{user_id}/{role_type}",
+            self.get_chat_history,
+            methods=["GET"],
+        )
+
+        app.add_api_route(
+            "/chat_history/{user_id}/{role_type}",
+            self.delete_chat_history,
+            methods=["DELETE"],
+        )
+
         logger.info("FastAPI 应用构建完成")
         return app
+
+
 
 
 def create_app() -> FastAPI:

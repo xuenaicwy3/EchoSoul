@@ -1,6 +1,5 @@
 (function() {
   const API_BASE = "";
-  //const USER_ID = "web_user_" + Math.random().toString(36).substr(2, 8);
   // 从 localStorage 获取或创建持久化的 user_id
   let USER_ID = localStorage.getItem('echo_user_id');
   if (!USER_ID) {
@@ -22,7 +21,6 @@
 
   let sessions = [];
   let activeSessionRole = null;
-  let sessionMessages = {};
 
   const homeView = document.getElementById('homeView');
   const chatView = document.getElementById('chatView');
@@ -82,6 +80,23 @@
 
   buildCustomOptions();
 
+  // 从后端加载聊天历史并渲染到聊天区
+  async function loadHistory(roleType) {
+    try {
+      const res = await fetch(`${API_BASE}/chat_history/${USER_ID}/${encodeURIComponent(roleType)}`);
+      if (res.ok) {
+        const data = await res.json();
+        chatArea.innerHTML = '';
+        (data.history || []).forEach(msg => {
+          addMessage(msg.sender, msg.message, formatTime(msg.timestamp));
+        });
+        chatArea.scrollTop = chatArea.scrollHeight;
+      }
+    } catch (e) {
+      console.warn('加载历史失败', e);
+    }
+  }
+
   function renderSessionList() {
     sessionListEl.innerHTML = '';
     sessions.forEach(session => {
@@ -109,28 +124,33 @@
       return;
     }
     sessions.push({ roleType: role.type, name: role.name, emoji: role.emoji });
-    sessionMessages[roleType] = '';
     switchSession(roleType);
     // 发送带标识的角色选择消息，确保后端精准识别
     sendMessage(`[ROLE_SELECT]${roleType}`, true);
   }
 
   function switchSession(roleType) {
-    if (activeSessionRole) { sessionMessages[activeSessionRole] = chatArea.innerHTML; }
     activeSessionRole = roleType;
     const session = sessions.find(s => s.roleType === roleType);
     if (session) { chatHeaderName.textContent = `与 ${session.name} 的对话`; }
-    chatArea.innerHTML = sessionMessages[roleType] || '';
-    chatArea.scrollTop = chatArea.scrollHeight;
+    // 从后端加载历史记录
+    loadHistory(roleType);
     renderSessionList();
   }
 
-  function deleteSession(roleType) {
+  async function deleteSession(roleType) {
+    // 删除后端聊天历史
+    try {
+      await fetch(`${API_BASE}/chat_history/${USER_ID}/${encodeURIComponent(roleType)}`, { method: 'DELETE' });
+    } catch (e) {
+      console.warn('删除历史失败', e);
+    }
+    // 从会话列表中移除
     sessions = sessions.filter(s => s.roleType !== roleType);
-    delete sessionMessages[roleType];
     if (activeSessionRole === roleType) {
-      if (sessions.length > 0) { switchSession(sessions[0].roleType); }
-      else {
+      if (sessions.length > 0) {
+        switchSession(sessions[0].roleType);
+      } else {
         activeSessionRole = null;
         chatHeaderName.textContent = '选择一个会话开始聊天';
         chatArea.innerHTML = '';
@@ -165,18 +185,19 @@
         body: JSON.stringify({
             user_id: USER_ID,
             message: message,
-            role_type:activeSessionRole  // 新增：传递当前活跃角色
+            role_type: activeSessionRole  // 传递当前活跃角色
         })
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
+      // 根据后端返回的角色更新标题
       if (data.role) {
         const role = ALL_ROLES.find(r => r.type === data.role);
         if (role) chatHeaderName.textContent = `与 ${role.name} 的对话`;
       }
       typingHint.style.display = 'none';
       addMessage('ai', data.reply, formatTime());
-      if (activeSessionRole) { sessionMessages[activeSessionRole] = chatArea.innerHTML; }
+      // 不再手动维护 sessionMessages，历史由后端管理
     } catch (err) {
       typingHint.style.display = 'none';
       addMessage('ai', '😢 网络出小差了，请稍后再试~', formatTime());
@@ -204,10 +225,16 @@
     chatArea.scrollTop = chatArea.scrollHeight;
   }
 
-  function formatTime() {
+  function formatTime(timestamp) {
+    // 接受一个可选的 timestamp 参数，用于格式化历史消息的时间
+    if (timestamp) {
+      const date = new Date(timestamp);
+      return `${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
+    }
     const now = new Date();
     return `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
   }
+
   function escapeHtml(text) {
     const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
     return text.replace(/[&<>"']/g, m => map[m]);

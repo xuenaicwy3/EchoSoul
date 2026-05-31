@@ -5,6 +5,7 @@
 import logging
 import uuid
 import chromadb
+
 from datetime import datetime
 from langchain.chat_models import init_chat_model
 from langchain_community.embeddings import DashScopeEmbeddings
@@ -29,7 +30,8 @@ class MemoryService(MemoryManager):
         self.client = chromadb.PersistentClient(path=settings.CHROMA_PATH)
         self.collection = self.client.get_or_create_collection(
             name=settings.COLLECTION_NAME,
-            metadata={"hnsw:space": "cosine"}   # 使用余弦相似度
+            metadata={"hnsw:space": "cosine"},   # 使用余弦相似度
+            embedding_function=None  # 禁用 Chroma 自带嵌入，避免下载模型
         )
         # 记忆摘要 LLM（轻量）
         self.summary_llm = init_chat_model(
@@ -150,3 +152,7 @@ class MemoryService(MemoryManager):
         except Exception as e:
             logger.error("记忆检索失败: %s", e, exc_info=True)
             return "暂无记忆"
+
+
+
+
