@@ -11,7 +11,8 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
-
+from app.database import init_db, close_db
+from app.redis_client import init_redis, close_redis
 from app.config import Settings
 from app.logging_config import setup_logging
 from app.agent import EchoSoulAgent
@@ -24,6 +25,7 @@ from app.exceptions import EchoSoulException
 from langchain_core.runnables import RunnableConfig
 from app.roles import RoleCatalog
 from app.chat_history import ChatHistoryManager
+
 logger = logging.getLogger(__name__)
 
 
@@ -40,7 +42,7 @@ class EchoSoulAPI:
         # ---------- 2. 实例化所有依赖服务（依赖注入） ----------
         self.emotion_service = EmotionService(self.settings)
         self.memory_service = MemoryService(self.settings)
-        self.affection_service = AffectionService(self.settings)
+        self.affection_service = AffectionService()
         self.scheduler = ProactiveScheduler(self.settings, self.affection_service)
         self.agent = EchoSoulAgent(
             self.settings,
@@ -48,7 +50,7 @@ class EchoSoulAPI:
             self.memory_service,
             self.affection_service,
         )
-        self.chat_history = ChatHistoryManager(self.settings.CHROMA_PATH)
+        self.chat_history = ChatHistoryManager()
         logger.info("所有服务已实例化")
 
         # 静态文件目录将在 build_app 中确定
@@ -59,10 +61,14 @@ class EchoSoulAPI:
     @asynccontextmanager
     async def lifespan(self, app: FastAPI):
         """应用生命周期：启动时开启调度器，关闭时关闭调度器"""
+        await init_db(self.settings)
+        await init_redis(self.settings)
         self.scheduler.start()
-        logger.info("后台调度器已启动")
+        logger.info("后台调度器已启动 postgresql初始化完成  redis初始化完成")
         yield
         self.scheduler.shutdown()
+        await close_redis()
+        await close_db()
         logger.info("后台调度器已关闭")
 
     # ---------- 路由处理方法（无需装饰器，后续手动注册） ----------
@@ -79,7 +85,7 @@ class EchoSoulAPI:
     async def chat(self, req: ChatRequest) -> ChatResponse:
         """聊天接口：接收用户消息，调用 Agent 并返回 AI 回复"""
         logger.info("收到消息: user=%s, msg=%s", req.user_id[:8], req.message[:30])
-        self.scheduler.update_active(req.user_id)
+        await self.scheduler.update_active(req.user_id)
 
         # ---------- 预处理：解析 [ROLE_SELECT] 消息 ----------
         preset_role = None
@@ -111,13 +117,15 @@ class EchoSoulAPI:
         config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
         logger.info("[Main] thread_id: %s", thread_id)
         logger.info("[Main] 初始化历史记录: %s", self.agent.graph.get_state({"configurable": {"thread_id": thread_id}}))
+        # 异步获取好感度信息（预计算）
+        aff_info, unlock_info = await self._get_affection_info(req.user_id, final_role)
 
         negative_kws = ["不满意", "不认同", "重新说", "换一个", "不想听", "不对"]
 
         if any(kw in req.message for kw in negative_kws):
             # 用户要求重新生成回复
             try:
-                last = self.agent.graph.get_state(config)
+                last =  self.agent.graph.get_state(config)
                 vals = last.values or {}
             except Exception:
                 vals = {}
@@ -140,8 +148,10 @@ class EchoSoulAPI:
                     "user_msg": vals.get("user_input", ""),
                     "ai_msg": vals.get("final_response", ""),
                 },
+                "aff_info": aff_info,  # 注入
+                "unlock_info": unlock_info,  # 注入
             }
-            final = self.agent.invoke(regen_state, config)
+            final =  self.agent.invoke(regen_state, config)
         else:
             # 正常对话流程（含角色选择预处理）
             init_state: AgentState  = {
@@ -153,6 +163,8 @@ class EchoSoulAPI:
                 "final_response": preset_greeting,
                 "need_regenerate": False,
                 "regenerate_context": None,
+                "aff_info": aff_info,  # 注入
+                "unlock_info": unlock_info,  # 注入
             }
 
             # 调试日志（可保留）
@@ -164,13 +176,14 @@ class EchoSoulAPI:
         # 在 chat 方法中，return 之前，存储历史之前
         logger.info("准备存储历史，final_role=%s, msg=%s", final_role, req.message[:30])
 
-        # ---------- 存储聊天历史 ----------
-        # 用户消息（系统指令不存）
-        if not req.message.startswith("[ROLE_SELECT]"):
-            self.chat_history.add_message(req.user_id, final_role, "user", req.message)
-        # 存储 AI 回复
-        if final.get("final_response"):
-            self.chat_history.add_message(req.user_id, final_role, "ai", final["final_response"])
+        # ---------- 异步后处理：存储聊天历史、更新好感度、存储记忆 ----------
+        await self.agent.finalize_conversation(
+            user_id=req.user_id,
+            role_type=final_role,
+            user_message=req.message,
+            ai_reply=final.get("final_response", ""),
+            emotion=final.get("emotion", {}),
+        )
 
         return ChatResponse(
             reply=final["final_response"],
@@ -178,10 +191,31 @@ class EchoSoulAPI:
             role=final.get("role_type"),
         )
 
+    async def _get_affection_info(self, user_id: str, role_type: str) -> tuple[str, str]:
+        """获取预计算的好感度文本"""
+        aff_info = "亲密度10, 信任10"
+        unlock_info = ""
+        if not role_type:
+            return aff_info, unlock_info
+        try:
+            aff = await self.affection_service.get(user_id, role_type)
+            unl = await self.affection_service.get_unlock_state(user_id, role_type)
+            aff_info = f"亲密度{aff['intimacy']:.0f}, 信任{aff['trust']:.0f}"
+            if unl["level"] >= 2:
+                unlock_info += "关系亲密，说话更随意。"
+            if unl["story_unlocked"]:
+                unlock_info += "可分享角色小秘密。"
+            if unl["avatar_upgraded"]:
+                unlock_info += "角色换了新衣服。"
+        except Exception as e:
+            logger.error("获取好感度失败: %s", e)
+        return aff_info, unlock_info
+
+
     async def get_affection(self, user_id: str, role_type: str) -> AffectionResponse:
         """好感度查询接口"""
-        aff = self.affection_service.get(user_id, role_type)
-        unl = self.affection_service.get_unlock_state(user_id, role_type)
+        aff = await self.affection_service.get(user_id, role_type)
+        unl = await self.affection_service.get_unlock_state(user_id, role_type)
         unlocks = []
         if unl["level"] >= 1:
             unlocks.append("语气升级")
@@ -202,17 +236,17 @@ class EchoSoulAPI:
 
     async def get_active_messages(self, user_id: str) -> dict:
         """主动消息获取接口"""
-        msgs = self.scheduler.get_pending(user_id)
+        msgs = await self.scheduler.get_pending(user_id)
         return {"messages": msgs}
 
     async def get_chat_history(self, user_id: str, role_type: str):
         """查询指定角色下的聊天历史"""
-        history = self.chat_history.get_history(user_id, role_type)
+        history = await self.chat_history.get_history(user_id, role_type)
         return {"history": history}
 
     async def delete_chat_history(self, user_id: str, role_type: str):
         """删除聊天历史"""
-        self.chat_history.delete_history(user_id, role_type)
+        await self.chat_history.delete_history(user_id, role_type)
         return {"status": "ok"}
 
     # ---------- 构建 FastAPI 应用 ----------

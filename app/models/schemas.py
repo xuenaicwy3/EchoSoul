@@ -43,3 +43,5 @@ class AgentState(TypedDict):
     final_response: Optional[str]
     need_regenerate: bool
     regenerate_context: Optional[Dict[str, str]]
+    aff_info: str
+    unlock_info: str

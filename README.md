@@ -12,7 +12,7 @@ EchoSoul 是一个基于大语言模型的智能陪伴系统，旨在为用户�
 
 uvicorn app.main:create_app --factory --host 127.0.0.1 --port 9000 --reload
 
-uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000 --reload
+uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000 
 
 # 使用清华源安装
 pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
@@ -22,3 +22,5 @@ pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/
 
 
 New-Item -Path . -Name ".gitignore" -ItemType File -Value ".env`n"
+
+

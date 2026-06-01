@@ -28,10 +28,20 @@ class MemoryService(MemoryManager):
         )
         # Chroma 持久化客户端
         self.client = chromadb.PersistentClient(path=settings.CHROMA_PATH)
-        self.collection = self.client.get_or_create_collection(
+        # 先删除旧集合（避免遗留嵌入函数）
+        try:
+            self.client.delete_collection(settings.COLLECTION_NAME)
+        except:
+            pass
+        # self.collection = self.client.get_or_create_collection(
+        #     name=settings.COLLECTION_NAME,
+        #     metadata={"hnsw:space": "cosine"},   # 使用余弦相似度
+        #     embedding_function=None  # 禁用 Chroma 自带嵌入，避免下载模型
+        # )
+        self.collection = self.client.create_collection(
             name=settings.COLLECTION_NAME,
             metadata={"hnsw:space": "cosine"},   # 使用余弦相似度
-            embedding_function=None  # 禁用 Chroma 自带嵌入，避免下载模型
+            embedding_function=None
         )
         # 记忆摘要 LLM（轻量）
         self.summary_llm = init_chat_model(

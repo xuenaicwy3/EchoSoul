@@ -9,6 +9,8 @@ from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain.chat_models import init_chat_model
+
+from app.chat_history import ChatHistoryManager
 from app.config import Settings
 # from app.interfaces import EmotionAnalyzer, MemoryManager, AffectionManager
 from app.roles import RoleCatalog
@@ -35,6 +37,7 @@ class EchoSoulAgent:
         memory_svc: MemoryService,
         affection_svc: AffectionService,
     ):
+        self.chat_history: ChatHistoryManager = ChatHistoryManager()
         self.settings = settings
         # 主对话 LLM
         self.llm = init_chat_model(
@@ -124,27 +127,15 @@ class EchoSoulAgent:
         user_id = state["user_id"]
         user_input = state["user_input"]
 
+        # 从 state 中读取预计算的好感度信息（由 main.py 传入）
+        aff_info = state.get("aff_info", "亲密度10, 信任10")
+        unlock_info = state.get("unlock_info", "")
+
         # 获取情绪应对策略
         style = EmotionService.get_emotion_style(emotion["label"], emotion["score"])
-        logger.debug("[generate] 角色=%s, 情绪策略=%s", role_type, style[:30])
-
-        # 获取好感度与解锁状态
-        aff = self.affection_svc.get(user_id, role_type)
-        unl = self.affection_svc.get_unlock_state(user_id, role_type)
-        aff_info = f"亲密度{aff['intimacy']:.0f}, 信任{aff['trust']:.0f}"
-        unlock_info = ""
-        if unl["level"] >= 2:
-            unlock_info += "关系亲密，说话更随意。"
-        if unl["story_unlocked"]:
-            unlock_info += "可分享角色小秘密。"
-        if unl["avatar_upgraded"]:
-            unlock_info += "角色换了新衣服。"
-        logger.debug("[generate] 好感度: %s, 解锁等级: %d", aff_info, unl["level"])
-
         # 构建系统提示词
-        system_prompt = PromptFactory.system_prompt(
-            role_type, style, memory_text, aff_info, unlock_info
-        )
+        system_prompt = PromptFactory.system_prompt(role_type, style, memory_text, aff_info, unlock_info)
+        logger.info("[generate] 角色=%s, 情绪策略=%s", role_type, style[:30])
 
         # 处理重新生成逻辑
         if state.get("need_regenerate") and state.get("regenerate_context"):
@@ -154,32 +145,15 @@ class EchoSoulAgent:
         else:
             human_content = user_input
 
-        # 调用 LLM 生成回复
-        messages = [
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=human_content),
-        ]
+        messages = [SystemMessage(content=system_prompt), HumanMessage(content=human_content)]
         resp = self.llm.invoke(messages)
         final_text = resp.content
         logger.info("[generate] 回复: %s...", final_text[:50])
 
-        # 存储记忆和更新好感度（非重新生成时）
-        # 调用记忆存储
-        if not state.get("need_regenerate"):
-            self.memory_svc.store(
-                user_id=state["user_id"],
-                user_msg=state["user_input"],
-                ai_reply=final_text,
-                emotion=emotion,
-                role_type=role_type  # 传入当前角色
-            )
-            delta = self.affection_svc.calculate_delta(user_input, final_text, emotion)
-            self.affection_svc.update(user_id, role_type, delta)
-            logger.debug("[generate] 记忆已存储，好感度已更新")
-
         state["final_response"] = final_text
         state["need_regenerate"] = False
         return state
+
 
     # -------------------- 图构建（使用 AgentState 类型） --------------------
     def _build_graph(self):
@@ -217,3 +191,28 @@ class EchoSoulAgent:
         result = self.graph.invoke(state, config)
         logger.info("Agent.invoke 结束, 回复长度=%d", len(result.get("final_response", "")))
         return result
+
+    async def finalize_conversation(self, user_id: str, role_type: str, user_message: str,
+                                    ai_reply: str, emotion: dict):
+        """异步后处理：存储聊天记录、更新好感度、存储记忆"""
+        # 存储聊天历史
+        if user_message and not user_message.startswith("[ROLE_SELECT]"):
+            #async def add_message(self, user_id: str, role_type: str, sender: str, message: str)
+            await self.chat_history.add_message(
+                user_id=user_id,
+                role_type=role_type,
+                sender="user",
+                message=user_message)
+        if ai_reply:
+            await self.chat_history.add_message(
+                user_id=user_id,
+                role_type=role_type,
+                sender="ai",
+                message=ai_reply)
+
+        # 更新好感度
+        delta = self.affection_svc.calculate_delta(user_message, ai_reply, emotion)
+        await self.affection_svc.update(user_id, role_type, delta)
+
+        # 存储记忆（memory_svc.store 是同步方法，这里直接调用）
+        self.memory_svc.store(user_id, user_message, ai_reply, emotion, role_type)

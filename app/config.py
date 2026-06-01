@@ -18,7 +18,7 @@ class Settings(BaseSettings):
 
     # ---------- 服务 ----------
     HOST: str = "127.0.0.1"
-    PORT: int = 9000
+    PORT: int = 8000
 
     # ---------- 日志 ----------
     LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
@@ -29,9 +29,12 @@ class Settings(BaseSettings):
     MEMORY_TOP_K: int = 5                          # 检索记忆数量
     SIMILARITY_THRESHOLD: float = 0.15             # 去重相似度阈值
 
+    DATABASE_URL: str = "postgresql+asyncpg://echosoul:123456@localhost:5432//echosoul?ssl=disable"
+    REDIS_URL: str = "redis://localhost:6379/0"
+
     # ---------- 好感度系统 ----------
-    AFFECTION_DB_PATH: str = "affection.db"        # SQLite 数据库路径
-    AFFECTION_DECAY_PER_DAY: float = 2.0           # 每天衰减值
+    # AFFECTION_DB_PATH: str = "affection.db"        # SQLite 数据库路径
+    # AFFECTION_DECAY_PER_DAY: float = 2.0           # 每天衰减值
 
     # ---------- 主动消息调度 ----------
     INACTIVE_HOURS: int = 2                        # 连续未互动小时数后触发
