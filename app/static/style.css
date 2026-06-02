@@ -1,0 +1,111 @@
+/* ========== 全局 ========== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: linear-gradient(135deg, #ffd6e0 0%, #ffb3c6 100%);
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* 视图切换用，这里不需要了，但保留以防影响 */
+.view { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; }
+.view.active { display: block; }
+.view.chat-active { display: flex; }
+
+/* ========== 登录/注册 ========== */
+.auth-container { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+.auth-card {
+  background: #fff; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  padding: 40px 30px; width: 360px; text-align: center;
+}
+.auth-title { font-size: 2rem; color: #b56576; margin-bottom: 8px; text-shadow: 0 2px 12px rgba(181,101,118,0.3); letter-spacing: 2px; }
+.auth-subtitle { color: #888; margin-bottom: 25px; font-size: 0.9rem; }
+.auth-error { background: #ffe0e0; color: #c0392b; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 0.85rem; }
+.auth-form input {
+  width: 100%; padding: 12px 15px; margin-bottom: 15px; border: 1px solid #f08080;
+  border-radius: 12px; font-size: 1rem; outline: none; transition: box-shadow 0.2s;
+}
+.auth-form input:focus { box-shadow: 0 0 0 3px rgba(240,128,128,0.3); }
+.auth-form button {
+  width: 100%; padding: 12px; background: #e5989b; color: white; border: none;
+  border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.2s;
+}
+.auth-form button:hover { background: #d16b7e; }
+.auth-toggle { margin-top: 15px; color: #999; font-size: 0.85rem; }
+.auth-toggle a { color: #b56576; text-decoration: none; font-weight: 600; }
+
+/* ========== 首页 ========== */
+.home-container { text-align: center; width: 100%; height: 100%; padding: 40px 20px; overflow-y: auto; }
+.home-title { font-size: 3rem; color: #b56576; margin-bottom: 10px; text-shadow: 0 2px 12px rgba(181,101,118,0.3); letter-spacing: 2px; }
+.home-subtitle { font-size: 1.2rem; color: #666; margin-bottom: 50px; font-weight: 300; }
+.role-cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 30px; max-width: 960px; margin: 0 auto; padding-bottom: 40px; }
+.role-card { width: 200px; background: #fff; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.3s, box-shadow 0.3s; overflow: hidden; display: flex; flex-direction: column; align-items: center; }
+.role-card:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+.card-avatar { width: 100%; height: 200px; display: flex; align-items: center; justify-content: center; font-size: 5rem; }
+.avatar-sakura  { background: linear-gradient(135deg, #ffd9e6, #ffb7c5); }
+.avatar-yukino  { background: linear-gradient(135deg, #e0d4f5, #c9b8e8); }
+.avatar-rin     { background: linear-gradient(135deg, #ffe0cc, #ffc8a2); }
+.avatar-tiantian{ background: linear-gradient(135deg, #fff0d4, #ffe1a8); }
+.avatar-dango   { background: linear-gradient(135deg, #d4f0f0, #b3e0e0); }
+.avatar-ruolan  { background: linear-gradient(135deg, #d9e8d9, #c2d9c2); }
+.avatar-genki   { background: linear-gradient(135deg, #ffe8d6, #ffd1b3); }
+.avatar-seisen  { background: linear-gradient(135deg, #e6d9f2, #d4c4e8); }
+.card-info { padding: 18px 15px; text-align: center; background: #fff; width: 100%; }
+.card-name { font-size: 1.3rem; font-weight: 700; color: #4a2545; margin-bottom: 6px; }
+.card-desc { font-size: 0.85rem; color: #999; }
+
+/* ========== 聊天界面 ========== */
+#chatView { display: none; }
+#chatView.chat-active { display: flex; }
+.app-container { display: flex; width: 100%; height: 100%; background: linear-gradient(135deg, #ffd6e0 0%, #ffb3c6 100%); }
+.sidebar { width: 280px; background: #fff0f2; border-right: 1px solid #fcd5ce; display: flex; flex-direction: column; }
+.sidebar-header { padding: 15px; border-bottom: 1px solid #fcd5ce; display: flex; align-items: center; gap: 10px; }
+.back-btn { background: none; border: none; color: #b56576; font-size: 0.9rem; cursor: pointer; font-weight: 600; }
+.back-btn:hover { color: #d16b7e; }
+.sidebar-header h2 { font-size: 1.1rem; color: #b56576; font-weight: 600; flex: 1; }
+.add-role-area { padding: 12px 15px; border-bottom: 1px solid #fcd5ce; display: flex; gap: 8px; background: #fff0f2; }
+.custom-select-wrapper { position: relative; flex: 1; }
+.custom-select { width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #f08080; background: #fff; color: #b56576; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; justify-content: space-between; }
+.custom-select .arrow { margin-left: 8px; transition: transform 0.2s; }
+.custom-select.open .arrow { transform: rotate(180deg); }
+.custom-options { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #fff; border: 1px solid #f08080; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 100; max-height: 200px; overflow-y: auto; display: none; }
+.custom-options.show { display: block; }
+.custom-option { padding: 10px 12px; cursor: pointer; color: #b56576; font-size: 0.9rem; transition: background 0.15s; }
+.custom-option:hover { background: #f8c8dc; }
+.custom-option.selected { background: #f8c8dc; font-weight: 600; }
+#addRoleBtn { background: #e5989b; color: white; border: none; border-radius: 8px; width: 36px; font-size: 1.2rem; cursor: pointer; }
+#addRoleBtn:hover { background: #d16b7e; }
+.session-list { flex: 1; overflow-y: auto; padding: 10px; background: #fff0f2; }
+.session-item { padding: 10px 12px; border-radius: 12px; margin-bottom: 6px; cursor: pointer; background: #fff; border: 2px solid transparent; display: flex; align-items: center; gap: 10px; transition: all 0.2s; }
+.session-item:hover { background: #ffe5d9; }
+.session-item.active { border-color: #e5989b; background: #fce4ec; }
+.session-avatar { width: 32px; height: 32px; border-radius: 50%; background: #ffe1e6; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; }
+.session-info { flex: 1; overflow: hidden; }
+.session-name { font-weight: 600; color: #4a2545; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.delete-session { background: none; border: none; color: #ccc; font-size: 1.2rem; cursor: pointer; padding: 0 5px; }
+.delete-session:hover { color: #e5989b; }
+.sidebar-footer { padding: 12px; text-align: center; border-top: 1px solid #fcd5ce; color: #999; font-size: 0.7rem; background: #fff0f2; }
+.chat-main { flex: 1; display: flex; flex-direction: column; }
+.chat-header { padding: 15px 25px; background: #fff0f2; border-bottom: 1px solid #fcd5ce; display: flex; align-items: center; position: relative; }
+.active-role-name { color: #b56576; font-weight: 600; }
+.typing-hint { position: absolute; left: 50%; transform: translateX(-50%); color: #999; font-style: italic; font-size: 0.9rem; white-space: nowrap; display: none; }
+.chat-area { flex: 1; overflow-y: auto; padding: 25px 20px; background: #fff5f5; display: flex; flex-direction: column; gap: 16px; }
+.message { display: flex; align-items: center; gap: 10px; animation: fadeIn 0.3s; }
+.message.ai { justify-content: flex-start; }
+.message.user { justify-content: flex-end; }
+.avatar { width: 40px; height: 40px; border-radius: 50%; background: #ffe1e6; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; flex-shrink: 0; }
+.user .avatar { order: 2; }
+.bubble { max-width: 70%; padding: 14px 18px; border-radius: 22px; font-size: 1rem; line-height: 1.5; word-break: break-word; }
+.ai .bubble { background: #fce4ec; color: #4a2545; border-bottom-left-radius: 6px; }
+.user .bubble { background: #f8d5e0; color: #2e1b2e; border-bottom-right-radius: 6px; }
+.time { font-size: 0.7rem; color: #aaa; margin-top: 5px; text-align: right; }
+.input-area { padding: 20px; background: #fff0f2; border-top: 1px solid #fcd5ce; display: flex; gap: 12px; }
+.input-area input { flex: 1; padding: 14px 20px; border-radius: 30px; border: 1px solid #f08080; font-size: 1rem; outline: none; background: #fff; }
+.input-area input:focus { box-shadow: 0 0 0 3px rgba(240,128,128,0.3); }
+.input-area button { padding: 14px 25px; background: #e5989b; color: white; border: none; border-radius: 30px; font-weight: 600; cursor: pointer; }
+.input-area button:hover { background: #d16b7e; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.chat-area::-webkit-scrollbar, .home-container::-webkit-scrollbar, .session-list::-webkit-scrollbar { width: 6px; }
+.chat-area::-webkit-scrollbar-track, .home-container::-webkit-scrollbar-track, .session-list::-webkit-scrollbar-track { background: #fff0e6; }
+.chat-area::-webkit-scrollbar-thumb, .home-container::-webkit-scrollbar-thumb, .session-list::-webkit-scrollbar-thumb { background: #f8c8dc; border-radius: 3px; }
+@media (max-width: 900px) { .role-card { width: 160px; } .card-avatar { height: 160px; font-size: 4rem; } .sidebar { width: 240px; } }

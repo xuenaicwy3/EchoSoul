@@ -15,7 +15,6 @@ class EmotionResult(BaseModel):
     score: float = Field(ge=0.0, le=1.0, description="置信度分数，0到1之间")
 
 class ChatRequest(BaseModel):
-    user_id: str
     message: str
     role_type: Optional[str] = None  # 新增：前端传入的当前角色
 

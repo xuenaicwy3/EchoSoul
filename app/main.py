@@ -9,6 +9,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.params import Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from app.database import init_db, close_db
@@ -25,6 +26,9 @@ from app.exceptions import EchoSoulException
 from langchain_core.runnables import RunnableConfig
 from app.roles import RoleCatalog
 from app.chat_history import ChatHistoryManager
+from app.dependencies import get_current_user
+from app.routers import auth_router
+from app.models.user import User
 
 logger = logging.getLogger(__name__)
 
@@ -51,10 +55,12 @@ class EchoSoulAPI:
             self.affection_service,
         )
         self.chat_history = ChatHistoryManager()
+        self.users = User
         logger.info("所有服务已实例化")
 
         # 静态文件目录将在 build_app 中确定
-        self.static_dir: Path | None = None
+        # self.static_dir: Path | None = None
+        self.static_dir = Path(__file__).parent / "static"
 
 
     # ---------- 生命周期（调度器启停） ----------
@@ -82,10 +88,10 @@ class EchoSoulAPI:
             self.static_dir = Path(__file__).parent / "static"
         return FileResponse(self.static_dir / "index.html")
 
-    async def chat(self, req: ChatRequest) -> ChatResponse:
+    async def chat(self, req: ChatRequest, current_user: str = Depends(get_current_user)) -> ChatResponse:
         """聊天接口：接收用户消息，调用 Agent 并返回 AI 回复"""
-        logger.info("收到消息: user=%s, msg=%s", req.user_id[:8], req.message[:30])
-        await self.scheduler.update_active(req.user_id)
+        logger.info("收到消息: user=%s, msg=%s", current_user, req.message[:30])
+        await self.scheduler.update_active(current_user)
 
         # ---------- 预处理：解析 [ROLE_SELECT] 消息 ----------
         preset_role = None
@@ -101,7 +107,7 @@ class EchoSoulAPI:
 
         # 从历史状态中恢复角色（使用通用 thread_id 获取最近一次状态，仅用于提取 role_type）
         try:
-            last = self.agent.graph.get_state({"configurable": {"thread_id": req.user_id}})
+            last = self.agent.graph.get_state({"configurable": {"thread_id": current_user}})
             vals = last.values if last else {}
             # 测试
             logger.info("[Main] last.values: %s, last: %s", vals, last)
@@ -113,12 +119,12 @@ class EchoSoulAPI:
         final_role = req.role_type or preset_role or vals.get("role_type")
 
         # 为每个角色创建独立的 thread_id，实现对话历史隔离
-        thread_id = f"{req.user_id}:{final_role}" if final_role else req.user_id
+        thread_id = f"{current_user}:{final_role}" if final_role else current_user
         config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
         logger.info("[Main] thread_id: %s", thread_id)
         logger.info("[Main] 初始化历史记录: %s", self.agent.graph.get_state({"configurable": {"thread_id": thread_id}}))
         # 异步获取好感度信息（预计算）
-        aff_info, unlock_info = await self._get_affection_info(req.user_id, final_role)
+        aff_info, unlock_info = await self._get_affection_info(current_user, final_role)
 
         negative_kws = ["不满意", "不认同", "重新说", "换一个", "不想听", "不对"]
 
@@ -137,7 +143,7 @@ class EchoSoulAPI:
                         vals.get("emotion", {"label": "neutral", "score": 0.5}), vals.get("memory_text", ""))
 
             regen_state: AgentState = {
-                "user_id": req.user_id,
+                "user_id": current_user,
                 "user_input": req.message,
                 "role_type": regen_role,
                 "emotion": vals.get("emotion", {"label": "neutral", "score": 0.5}),
@@ -155,7 +161,7 @@ class EchoSoulAPI:
         else:
             # 正常对话流程（含角色选择预处理）
             init_state: AgentState  = {
-                "user_id": req.user_id,
+                "user_id": current_user,
                 "user_input": user_input,
                 "role_type": final_role,
                 "emotion": vals.get("emotion", {}),
@@ -178,7 +184,7 @@ class EchoSoulAPI:
 
         # ---------- 异步后处理：存储聊天历史、更新好感度、存储记忆 ----------
         await self.agent.finalize_conversation(
-            user_id=req.user_id,
+            user_id=current_user,
             role_type=final_role,
             user_message=req.message,
             ai_reply=final.get("final_response", ""),
@@ -191,15 +197,15 @@ class EchoSoulAPI:
             role=final.get("role_type"),
         )
 
-    async def _get_affection_info(self, user_id: str, role_type: str) -> tuple[str, str]:
+    async def _get_affection_info(self, role_type: str, current_user: str = Depends(get_current_user)) -> tuple[str, str]:
         """获取预计算的好感度文本"""
         aff_info = "亲密度10, 信任10"
         unlock_info = ""
         if not role_type:
             return aff_info, unlock_info
         try:
-            aff = await self.affection_service.get(user_id, role_type)
-            unl = await self.affection_service.get_unlock_state(user_id, role_type)
+            aff = await self.affection_service.get(current_user, role_type)
+            unl = await self.affection_service.get_unlock_state(current_user, role_type)
             aff_info = f"亲密度{aff['intimacy']:.0f}, 信任{aff['trust']:.0f}"
             if unl["level"] >= 2:
                 unlock_info += "关系亲密，说话更随意。"
@@ -212,10 +218,10 @@ class EchoSoulAPI:
         return aff_info, unlock_info
 
 
-    async def get_affection(self, user_id: str, role_type: str) -> AffectionResponse:
+    async def get_affection(self, role_type: str, current_user: str = Depends(get_current_user)) -> AffectionResponse:
         """好感度查询接口"""
-        aff = await self.affection_service.get(user_id, role_type)
-        unl = await self.affection_service.get_unlock_state(user_id, role_type)
+        aff = await self.affection_service.get(current_user, role_type)
+        unl = await self.affection_service.get_unlock_state(current_user, role_type)
         unlocks = []
         if unl["level"] >= 1:
             unlocks.append("语气升级")
@@ -234,20 +240,35 @@ class EchoSoulAPI:
             unlocks=unlocks,
         )
 
-    async def get_active_messages(self, user_id: str) -> dict:
+    async def get_active_messages(self, current_user: str = Depends(get_current_user)) -> dict:
         """主动消息获取接口"""
-        msgs = await self.scheduler.get_pending(user_id)
+        msgs = await self.scheduler.get_pending(current_user)
         return {"messages": msgs}
 
-    async def get_chat_history(self, user_id: str, role_type: str):
+    async def get_chat_history(self, role_type: str, current_user: str = Depends(get_current_user)):
         """查询指定角色下的聊天历史"""
-        history = await self.chat_history.get_history(user_id, role_type)
+        history = await self.chat_history.get_history(current_user, role_type)
         return {"history": history}
 
-    async def delete_chat_history(self, user_id: str, role_type: str):
+    async def delete_chat_history(self, role_type: str, current_user: str = Depends(get_current_user)):
         """删除聊天历史"""
-        await self.chat_history.delete_history(user_id, role_type)
+        await self.chat_history.delete_history(current_user, role_type)
         return {"status": "ok"}
+
+
+    async def login_page(self):
+        return FileResponse(str(self.static_dir / "login.html"))
+
+    async def register_page(self):
+        return FileResponse(str(self.static_dir / "register.html"))
+
+    async def home_page(self):
+        return FileResponse(str(self.static_dir / "home.html"))
+
+    async def chat_page(self, request: Request):
+        # 聊天页面通过URL参数传递角色，前端会解析
+        return FileResponse(str(self.static_dir / "chat.html"))
+
 
     # ---------- 构建 FastAPI 应用 ----------
     def build_app(self) -> FastAPI:
@@ -261,6 +282,7 @@ class EchoSoulAPI:
         logger.debug("静态文件目录: %s", self.static_dir)
 
         app = FastAPI(title="EchoSoul API", lifespan=self.lifespan)
+        app.include_router(auth_router.router)  # 注册 /auth/register 和 /auth/login
 
         # ---------- 全局中间件 ----------
         app.add_middleware(
@@ -282,37 +304,47 @@ class EchoSoulAPI:
             logger.critical("未捕获异常: %s", exc, exc_info=True)
             return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
-        # ---------- 静态文件挂载 ----------
-        # 将 /static 路径映射到实际的静态文件目录
-        app.mount("/static", StaticFiles(directory=str(self.static_dir)), name="static")
-
         # ---------- 注册路由 ----------
-        app.add_api_route("/", self.root, methods=["GET"])
-        app.add_api_route("/chat", self.chat, methods=["POST"], response_model=ChatResponse)
+        # 需要认证的路由统一添加 dependencies
+        auth_deps = [Depends(get_current_user)]
+        app.add_api_route("/chat", self.chat, methods=["POST"], response_model=ChatResponse,
+                          dependencies=auth_deps)
         app.add_api_route(
-            "/affection/{user_id}/{role_type}",
+            "/affection/{role_type}",
             self.get_affection,
             methods=["GET"],
             response_model=AffectionResponse,
+            dependencies=auth_deps
         )
-        app.add_api_route("/active_messages/{user_id}", self.get_active_messages, methods=["GET"])
+        app.add_api_route("/active_messages", self.get_active_messages, methods=["GET"],dependencies=auth_deps)
 
         # 在 build_app 方法内，其他路由注册之后添加
         app.add_api_route(
-            "/chat_history/{user_id}/{role_type}",
+            "/chat_history/{role_type}",
             self.get_chat_history,
             methods=["GET"],
+            dependencies=auth_deps
         )
 
         app.add_api_route(
-            "/chat_history/{user_id}/{role_type}",
+            "/chat_history/{role_type}",
             self.delete_chat_history,
             methods=["DELETE"],
+            dependencies=auth_deps
         )
+
+        # ---------- 页面路由（无需认证） ----------
+        app.add_api_route("/login", self.login_page, methods=["GET"])
+        app.add_api_route("/register", self.register_page, methods=["GET"])
+        app.add_api_route("/home", self.home_page, methods=["GET"])
+        app.add_api_route("/chat", self.chat_page, methods=["GET"])  # 注意：GET /chat 返回聊天页面
+        app.add_api_route("/", self.login_page, methods=["GET"])  # 根路径默认到登录页
+        # 将 /static 路径映射到实际的静态文件目录
+        app.mount("/static", StaticFiles(directory=str(self.static_dir)), name="static")
+
 
         logger.info("FastAPI 应用构建完成")
         return app
-
 
 
 

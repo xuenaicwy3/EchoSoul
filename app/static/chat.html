@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>心流 · 聊天</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="app-container">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <button id="backBtn" class="back-btn" onclick="window.location.href='/home'">← 返回</button>
+        <h2>💞 心流</h2>
+      </div>
+      <div class="add-role-area">
+        <div class="custom-select-wrapper">
+          <div class="custom-select" id="customSelect">
+            <span id="customSelectText">+ 选择角色</span>
+            <span class="arrow">▾</span>
+          </div>
+          <div class="custom-options" id="customOptions"></div>
+        </div>
+        <button id="addRoleBtn" title="添加会话">＋</button>
+      </div>
+      <div class="session-list" id="sessionList"></div>
+      <div class="sidebar-footer"><small>点击会话切换，×删除</small></div>
+    </aside>
+    <main class="chat-main">
+      <div class="chat-header">
+        <span class="active-role-name">选择一个会话开始聊天</span>
+        <span class="typing-hint" id="typingHint">对方正在输入...</span>
+      </div>
+      <div class="chat-area" id="chatArea"></div>
+      <div class="input-area">
+        <input type="text" id="userInput" placeholder="说点什么吧..." autofocus />
+        <button id="sendBtn">发送</button>
+      </div>
+    </main>
+  </div>
+  <script>
+    // ===================== 认证检查 =====================
+    if (!localStorage.getItem('token')) {
+      window.location.href = '/login';
+    }
+
+    const API_BASE = '';
+    const USER_ID = localStorage.getItem('user_id');
+    const TOKEN = localStorage.getItem('token');
+
+    // 为每个用户创建独立的存储键，实现前端数据隔离
+    const STORAGE_KEY = 'echo_sessions_' + USER_ID;
+    const ACTIVE_ROLE_KEY = 'echo_active_role_' + USER_ID;
+
+    async function api(url, options = {}) {
+      return fetch(url, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${TOKEN}`,
+          ...options.headers,
+        }
+      });
+    }
+
+    // ===================== 角色定义 =====================
+    const ALL_ROLES = [
+      { type: "日系动漫型", name: "小樱", emoji: "🌸", desc: "二次元少女" },
+      { type: "高冷御姐型", name: "雪乃", emoji: "❄️", desc: "职场精英" },
+      { type: "傲娇辣妹型", name: "凛", emoji: "💢", desc: "傲娇少女" },
+      { type: "甜美校花型", name: "甜甜", emoji: "🍬", desc: "校园女神" },
+      { type: "软萌可爱型", name: "团子", emoji: "🍡", desc: "软萌可爱" },
+      { type: "温柔贤淑型", name: "若兰", emoji: "🌿", desc: "温柔姐姐" },
+      { type: "元气少女型", name: "葵", emoji: "☀️", desc: "阳光少女" },
+      { type: "清冷仙气型", name: "清歌", emoji: "🌙", desc: "清冷仙女" }
+    ];
+
+    // ===================== 会话管理（持久化到 localStorage，按用户隔离） =====================
+    let sessions = [];
+    let activeSessionRole = null;
+
+    function loadSessions() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          sessions = JSON.parse(saved);
+        }
+      } catch (e) {
+        sessions = [];
+      }
+    }
+
+    function saveSessions() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+    }
+
+    loadSessions();
+
+    // DOM 元素
+    const chatArea = document.getElementById('chatArea');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const sessionListEl = document.getElementById('sessionList');
+    const chatHeaderName = document.querySelector('.active-role-name');
+    const typingHint = document.getElementById('typingHint');
+    const customSelect = document.getElementById('customSelect');
+    const customSelectText = document.getElementById('customSelectText');
+    const customOptions = document.getElementById('customOptions');
+    const addRoleBtn = document.getElementById('addRoleBtn');
+    let selectedRoleType = null;
+
+    // 自定义下拉框
+    function buildCustomOptions() {
+      customOptions.innerHTML = '';
+      ALL_ROLES.forEach(role => {
+        const div = document.createElement('div');
+        div.className = 'custom-option';
+        div.dataset.roleType = role.type;
+        div.textContent = `${role.emoji} ${role.name}`;
+        div.addEventListener('click', () => {
+          selectedRoleType = role.type;
+          customSelectText.textContent = `${role.emoji} ${role.name}`;
+          customOptions.classList.remove('show');
+          customSelect.classList.remove('open');
+          document.querySelectorAll('.custom-option').forEach(opt => opt.classList.remove('selected'));
+          div.classList.add('selected');
+        });
+        customOptions.appendChild(div);
+      });
+    }
+    buildCustomOptions();
+
+    customSelect.addEventListener('click', (e) => {
+      e.stopPropagation();
+      customOptions.classList.toggle('show');
+      customSelect.classList.toggle('open');
+    });
+    document.addEventListener('click', () => {
+      customOptions.classList.remove('show');
+      customSelect.classList.remove('open');
+    });
+
+    addRoleBtn.addEventListener('click', () => {
+      if (!selectedRoleType) { alert('请先选择一个角色'); return; }
+      createSession(selectedRoleType);
+      selectedRoleType = null;
+      customSelectText.textContent = '+ 选择角色';
+      document.querySelectorAll('.custom-option').forEach(opt => opt.classList.remove('selected'));
+    });
+
+    // 渲染会话列表
+    function renderSessionList() {
+      sessionListEl.innerHTML = '';
+      sessions.forEach(session => {
+        const item = document.createElement('div');
+        item.className = `session-item${activeSessionRole === session.roleType ? ' active' : ''}`;
+        item.innerHTML = `
+          <div class="session-avatar">${session.emoji}</div>
+          <div class="session-info"><div class="session-name">${session.name}</div></div>
+          <button class="delete-session" data-role="${session.roleType}">×</button>
+        `;
+        item.querySelector('.session-info').addEventListener('click', () => switchSession(session.roleType));
+        item.querySelector('.delete-session').addEventListener('click', (e) => {
+          e.stopPropagation();
+          deleteSession(session.roleType);
+        });
+        sessionListEl.appendChild(item);
+      });
+    }
+
+    function createSession(roleType) {
+      const role = ALL_ROLES.find(r => r.type === roleType);
+      if (!role) return;
+      if (sessions.some(s => s.roleType === roleType)) {
+        switchSession(roleType);
+        return;
+      }
+      sessions.push({ roleType: role.type, name: role.name, emoji: role.emoji });
+      saveSessions();
+      switchSession(roleType);
+      sendMessage(`[ROLE_SELECT]${roleType}`, true);
+    }
+
+    async function switchSession(roleType) {
+      activeSessionRole = roleType;
+      localStorage.setItem(ACTIVE_ROLE_KEY, roleType);
+      const session = sessions.find(s => s.roleType === roleType);
+      if (session) { chatHeaderName.textContent = `与 ${session.name} 的对话`; }
+      await loadHistory(roleType);
+      renderSessionList();
+    }
+
+    async function deleteSession(roleType) {
+      await api(`${API_BASE}/chat_history/${encodeURIComponent(roleType)}`, { method: 'DELETE' });
+      sessions = sessions.filter(s => s.roleType !== roleType);
+      saveSessions();
+      if (activeSessionRole === roleType) {
+        localStorage.removeItem(ACTIVE_ROLE_KEY);
+        if (sessions.length > 0) {
+          switchSession(sessions[0].roleType);
+        } else {
+          activeSessionRole = null;
+          chatHeaderName.textContent = '选择一个会话开始聊天';
+          chatArea.innerHTML = '';
+        }
+      }
+      renderSessionList();
+    }
+
+    async function loadHistory(roleType) {
+      try {
+        const res = await api(`${API_BASE}/chat_history/${encodeURIComponent(roleType)}`);
+        if (res.ok) {
+          const data = await res.json();
+          chatArea.innerHTML = '';
+          data.history.forEach(msg => {
+            addMessage(msg.sender, msg.message, formatTime(msg.timestamp));
+          });
+          chatArea.scrollTop = chatArea.scrollHeight;
+        }
+      } catch (e) {
+        console.warn('加载历史失败', e);
+      }
+    }
+
+    // 发送消息
+    async function sendMessage(message, isSystem = false) {
+      if (!activeSessionRole) { alert('请先选择一个会话'); return; }
+      if (!isSystem) addMessage('user', message, formatTime());
+      typingHint.style.display = 'block';
+      try {
+        const res = await api(`${API_BASE}/chat`, {
+          method: 'POST',
+          body: JSON.stringify({ message, role_type: activeSessionRole })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        typingHint.style.display = 'none';
+        addMessage('ai', data.reply, formatTime());
+      } catch (err) {
+        typingHint.style.display = 'none';
+        addMessage('ai', '😢 网络出小差了，请稍后再试~', formatTime());
+      }
+    }
+
+    function sendUserMessage() {
+      const text = userInput.value.trim();
+      if (!text) return;
+      if (!activeSessionRole) { alert('请先选择一个会话'); return; }
+      userInput.value = '';
+      sendMessage(text);
+    }
+
+    function addMessage(type, text, time) {
+      const session = sessions.find(s => s.roleType === activeSessionRole);
+      const avatarEmoji = type === 'ai' ? (session?.emoji || '🌸') : '😊';
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `message ${type}`;
+      msgDiv.innerHTML = `
+        <div class="avatar">${avatarEmoji}</div>
+        <div class="bubble"><div>${escapeHtml(text)}</div><div class="time">${time}</div></div>
+      `;
+      chatArea.appendChild(msgDiv);
+      chatArea.scrollTop = chatArea.scrollHeight;
+    }
+
+    function formatTime(timestamp) {
+      if (timestamp) {
+        const date = new Date(timestamp);
+        return `${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`;
+      }
+      const now = new Date();
+      return `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+    }
+
+    function escapeHtml(text) {
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+      return text.replace(/[&<>"']/g, m => map[m]);
+    }
+
+    // 事件绑定
+    sendBtn.addEventListener('click', sendUserMessage);
+    userInput.addEventListener('keypress', e => { if (e.key === 'Enter') sendUserMessage(); });
+
+    // ===================== 页面初始化：恢复会话状态（按用户隔离） =====================
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialRole = urlParams.get('role');
+    const lastActiveRole = localStorage.getItem(ACTIVE_ROLE_KEY);
+
+    if (initialRole) {
+      createSession(initialRole);
+    } else if (lastActiveRole && sessions.some(s => s.roleType === lastActiveRole)) {
+      switchSession(lastActiveRole);
+    } else if (sessions.length > 0) {
+      switchSession(sessions[0].roleType);
+    } else {
+      renderSessionList();
+    }
+  </script>
+</body>
+</html>

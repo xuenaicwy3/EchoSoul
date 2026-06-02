@@ -31,6 +31,12 @@ async def init_db(settings: Settings):
                             tables=[t for name, t in Base.metadata.tables.items() if name not in PARTITION_TABLES])
         # 2. 检查并迁移 chat_history 到分区表
         await _ensure_partitioned_chat_history(conn)
+
+        # 3. 修复序列值（防止主键冲突）
+        await conn.execute(text(
+            "SELECT setval('chat_history_id_seq', COALESCE((SELECT MAX(id) FROM chat_history), 1))"
+        ))
+
     logging.info("[InitDB] 数据库表创建完成，async_session 已设置")  # 成功标记
 
 

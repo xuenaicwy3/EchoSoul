@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     INACTIVE_HOURS: int = 2                        # 连续未互动小时数后触发
     SCHEDULER_INTERVAL_MINUTES: int = 60           # 检查间隔（分钟）
 
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 单位：分钟（默认 24 小时）
+    SECRET_KEY: str = "my-super-secret-key-change-this-in-production"
+    ALGORITHM: str = "HS256"
+
     model_config = {
         "env_file": ".env",           # 指定从 .env 文件读取
         "extra": "ignore"             # 忽略未定义的额外字段
