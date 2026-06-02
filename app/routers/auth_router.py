@@ -60,6 +60,7 @@ async def login(user_data: UserLogin):
         if not user or not verify_password(user_data.password, user.hashed_password):
             logger.info("登录失败: 用户名 '%s' 不存在或密码错误", user_data.username)
             raise HTTPException(status_code=401, detail="用户名或密码错误")
+        # 签发 Token
         access_token = create_access_token(data={"sub": user.id})
         logger.info("用户 '%s' 登录成功", user_data.username)
         return {"access_token": access_token, "user_id": user.id, "token_type": "bearer"}
