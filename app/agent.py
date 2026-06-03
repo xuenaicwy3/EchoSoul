@@ -1,4 +1,4 @@
-# app/agent.py (高并发修复版)
+# app/agent.py（高并发修复 + 测试模式保护版）
 import asyncio
 import logging
 from typing import Optional, Any
@@ -32,7 +32,7 @@ class EchoSoulAgent:
         self,
         settings: Settings,
         emotion_svc: EmotionService,
-        memory_svc: MemoryService,                             # 必须传入真实 MemoryService
+        memory_svc: MemoryService,          # 必须传入真实 MemoryService
         affection_svc: Optional[AffectionService] = None,
         checkpointer: Optional[BaseCheckpointSaver] = None,
     ):
@@ -50,7 +50,7 @@ class EchoSoulAgent:
         )
         self.emotion_svc = emotion_svc
         self.affection_svc = affection_svc or AffectionService()
-        self.memory_svc = memory_svc                              # 直接保存真实服务
+        self.memory_svc = memory_svc          # 直接保存真实服务
 
         # 检查点
         self.checkpointer = checkpointer or MemorySaver()
@@ -108,17 +108,19 @@ class EchoSoulAgent:
 
     def _emotion_node(self, state: AgentState) -> AgentState:
         user_msg = state.get("user_input", "")
-        if not user_msg:
-            emotion = {"label": "neutral", "score": 0.5}
-        else:
-            emotion = self.emotion_svc.analyze(user_msg)
+        # 测试模式下直接返回固定情绪，不调 AI
+        if self.settings.TEST_MODE or not user_msg:
+            state["emotion"] = {"label": "neutral", "score": 0.5}
+            return state
+
+        emotion = self.emotion_svc.analyze(user_msg)
         state["emotion"] = emotion
         return state
 
     def _memory_node(self, state: AgentState) -> AgentState:
         user_msg = state["user_input"]
         role_type = state.get("role_type", "温柔贤淑型")
-        # retrieve 是同步方法，在 Celery 同步任务中直接调用
+        # retrieve 是同步方法，在 Celery 同步任务中直接调用（测试模式下返回假记忆，见 memory.py）
         mem_text = self.memory_svc.retrieve(
             user_id=state["user_id"],
             query=user_msg,
@@ -128,8 +130,15 @@ class EchoSoulAgent:
         return state
 
     def _generate_node(self, state: AgentState) -> AgentState:
+        # 测试模式下直接返回固定回复
+        if self.settings.TEST_MODE:
+            state["final_response"] = "（测试模式）这是假回复，用于高并发压测。"
+            state["need_regenerate"] = False
+            return state
+
         if state.get("final_response") and not state.get("need_regenerate"):
             return state
+
         role_type = state.get("role_type", "温柔贤淑型")
         emotion = state.get("emotion", {"label": "neutral", "score": 0.5})
         memory_text = state.get("memory_text", "")
@@ -161,23 +170,19 @@ class EchoSoulAgent:
 
     async def finalize_conversation(self, user_id: str, role_type: str, user_message: str,
                                     ai_reply: str, emotion: dict):
+        # 存储聊天记录（始终执行）
         if user_message and not user_message.startswith("[ROLE_SELECT]"):
             await self.chat_history.add_message(
-                user_id=user_id,
-                role_type=role_type,
-                sender="user",
-                message=user_message)
+                user_id=user_id, role_type=role_type, sender="user", message=user_message)
         if ai_reply:
             await self.chat_history.add_message(
-                user_id=user_id,
-                role_type=role_type,
-                sender="ai",
-                message=ai_reply)
+                user_id=user_id, role_type=role_type, sender="ai", message=ai_reply)
 
+        # 好感度更新（不涉及 AI，始终执行）
         delta = self.affection_svc.calculate_delta(user_message, ai_reply, emotion)
         await self.affection_svc.update(user_id, role_type, delta)
 
-        # 记忆存储是同步方法，用线程池执行，避免阻塞事件循环
+        # 记忆存储是同步方法，放到线程池避免阻塞事件循环（测试模式在 store 内部处理）
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(
             None,

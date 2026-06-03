@@ -1,8 +1,8 @@
 import json
 import threading
-from celery import shared_task
 import redis
 import psycopg
+from celery import shared_task
 from langgraph.checkpoint.postgres import PostgresSaver
 
 from app.agent import EchoSoulAgent
@@ -23,7 +23,7 @@ def _build_agent():
             if _agent is None:
                 emotion_svc = EmotionService(settings)
                 affection_svc = AffectionService()
-                memory_svc = MemoryService(settings)          # ✅ 已添加
+                memory_svc = MemoryService(settings)
                 pg_conn = psycopg.connect(
                     "postgresql://echosoul:123456@localhost:5432/echosoul?sslmode=disable"
                 )
@@ -31,7 +31,7 @@ def _build_agent():
                 _agent = EchoSoulAgent(
                     settings,
                     emotion_svc=emotion_svc,
-                    memory_svc=memory_svc,                    # ✅ 已传入
+                    memory_svc=memory_svc,
                     affection_svc=affection_svc,
                     checkpointer=checkpointer
                 )
@@ -39,6 +39,32 @@ def _build_agent():
 
 @shared_task(name='process_chat')
 def process_chat(task_payload: dict) -> dict:
+    # ========== 测试模式：全部使用假数据，不调 AI ==========
+    if settings.TEST_MODE:
+        user_id = task_payload["user_id"]
+        role_type = task_payload.get("role_type", "温柔贤淑型")
+        # 固定回复，模拟 AI 输出
+        fake_reply = "（测试模式）这是假回复，用于高并发压测。"
+        fake_emotion = {"label": "neutral", "score": 0.9}
+
+        # 推送后处理数据到 Redis Stream，与真实流程完全一致
+        r = redis.Redis.from_url(settings.REDIS_URL)
+        postprocess_data = {
+            "user_id": user_id,
+            "role_type": role_type,
+            "user_input": task_payload.get("user_input", ""),
+            "ai_reply": fake_reply,
+            "emotion": fake_emotion,
+        }
+        r.xadd("postprocess_stream", {"data": json.dumps(postprocess_data)})
+
+        return {
+            "reply": fake_reply,
+            "emotion": fake_emotion,
+            "role": role_type
+        }
+
+    # ========== 正常模式：真实 AI 调用 ==========
     task_id = task_payload.get("task_id")
     user_id = task_payload["user_id"]
     role_type = task_payload["role_type"]

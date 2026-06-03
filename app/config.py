@@ -44,6 +44,12 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "my-super-secret-key-change-this-in-production"
     ALGORITHM: str = "HS256"
 
+    # ---------- 嵌入维度 ----------
+    EMBEDDING_DIM: int = 1536  # 阿里云 text-embedding-v1 的向量维度
+
+    # ---------- 测试模式 ----------
+    TEST_MODE: bool = True   # 设为 True 则跳过所有 AI 调用
+
     model_config = {
         "env_file": ".env",           # 指定从 .env 文件读取
         "extra": "ignore"             # 忽略未定义的额外字段
