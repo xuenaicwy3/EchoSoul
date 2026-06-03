@@ -204,24 +204,42 @@
   }
 
   async function sendMessage(message, isSystem = false) {
-    if (!activeSessionRole) { alert('请先选择一个会话'); return; }
-    if (!isSystem) addMessage('user', message, formatTime());
-    typingHint.style.display = 'block';
-    try {
-      const res = await api(`${API_BASE}/chat`, {
-        method: 'POST',
-        body: JSON.stringify({ message, role_type: activeSessionRole })
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      typingHint.style.display = 'none';
-      addMessage('ai', data.reply, formatTime());
-    } catch (err) {
-      typingHint.style.display = 'none';
-      addMessage('ai', '😢 网络出小差了，请稍后再试~', formatTime());
-    }
-  }
+      if (!activeSessionRole) { alert('请先选择一个会话'); return; }
+      if (!isSystem) addMessage('user', message, formatTime());
+      typingHint.style.display = 'block';
+      try {
+          // 1. 发送消息，获取 task_id
+          const res = await api(`${API_BASE}/chat`, {
+              method: 'POST',
+              body: JSON.stringify({ message, role_type: activeSessionRole })
+          });
+          const data = await res.json();
+          const taskId = data.task_id;
 
+          // 2. 轮询结果
+          let replyData = null;
+          for (let i = 0; i < 30; i++) {
+              await new Promise(r => setTimeout(r, 500));
+              const pollRes = await api(`${API_BASE}/chat/result/${taskId}`);
+              const pollData = await pollRes.json();
+              if (pollData.reply) {   // 关键：检查是否有回复
+                  replyData = pollData;
+                  break;
+              }
+          }
+
+          typingHint.style.display = 'none';
+
+          if (replyData) {
+              addMessage('ai', replyData.reply, formatTime());
+          } else {
+              addMessage('ai', '😢 AI 回复超时，请稍后再试~', formatTime());
+          }
+      } catch (err) {
+          typingHint.style.display = 'none';
+          addMessage('ai', '😢 网络出小差了，请稍后再试~', formatTime());
+      }
+  }
   function sendUserMessage() {
     const text = userInput.value.trim();
     if (!text) return;

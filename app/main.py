@@ -3,17 +3,26 @@ FastAPI 应用主模块
 使用 EchoSoulAPI 类封装应用构建、路由注册、中间件和异常处理。
 通过实例方法挂载路由，避免使用装饰器，便于依赖注入和测试。
 """
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+import psycopg
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+
+from app.checkpoint_setup import init_checkpoint_tables
+
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.params import Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
+from celery.result import AsyncResult
+from app.celery_app import celery_app
+from app.tasks import process_chat
 from app.database import init_db, close_db
-from app.redis_client import init_redis, close_redis
+from app.redis_client import init_redis, close_redis, get_task_result, publish_chat_task, redis_client
 from app.config import Settings
 from app.logging_config import setup_logging
 from app.agent import EchoSoulAgent
@@ -29,21 +38,23 @@ from app.chat_history import ChatHistoryManager
 from app.dependencies import get_current_user
 from app.routers import auth_router
 from app.models.user import User
+from app.redis_client import get_task_result as redis_get_task_result
+from app.redis_saver import RedisSaver
+import uuid
+import json
+from app.tasks import process_chat
+from celery.result import AsyncResult
+from app.celery_app import celery_app
+from app.tasks import process_chat
+from app.worker import process_postprocess_stream
 
 logger = logging.getLogger(__name__)
 
 
 class EchoSoulAPI:
-    """EchoSoul 应用核心类，负责组装服务、注册路由并返回 FastAPI 实例"""
-
-    def __init__(self) -> None:
-        # ---------- 1. 加载配置 ----------
+    def __init__(self):
         self.settings = Settings()
         setup_logging(self.settings)
-        logger.info("正在初始化 EchoSoulAPI ...")
-        logger.info("DASHSCOPE_API_KEY 已加载: %s", self.settings.DASHSCOPE_API_KEY + "****")
-
-        # ---------- 2. 实例化所有依赖服务（依赖注入） ----------
         self.emotion_service = EmotionService(self.settings)
         self.memory_service = MemoryService(self.settings)
         self.affection_service = AffectionService()
@@ -54,28 +65,25 @@ class EchoSoulAPI:
             self.memory_service,
             self.affection_service,
         )
-        self.chat_history = ChatHistoryManager()
-        self.users = User
-        logger.info("所有服务已实例化")
-
-        # 静态文件目录将在 build_app 中确定
-        # self.static_dir: Path | None = None
         self.static_dir = Path(__file__).parent / "static"
+        self.chat_history = ChatHistoryManager()
 
-
-    # ---------- 生命周期（调度器启停） ----------
     @asynccontextmanager
     async def lifespan(self, app: FastAPI):
-        """应用生命周期：启动时开启调度器，关闭时关闭调度器"""
         await init_db(self.settings)
         await init_redis(self.settings)
+
+        # 启动后处理 Worker
+        self.postprocess_task = asyncio.create_task(process_postprocess_stream(self.agent))
         self.scheduler.start()
-        logger.info("后台调度器已启动 postgresql初始化完成  redis初始化完成")
+        logger.info("后台服务已启动")
         yield
+        self.postprocess_task.cancel()
         self.scheduler.shutdown()
         await close_redis()
         await close_db()
-        logger.info("后台调度器已关闭")
+
+
 
     # ---------- 路由处理方法（无需装饰器，后续手动注册） ----------
     async def root(self) -> FileResponse:
@@ -88,12 +96,25 @@ class EchoSoulAPI:
             self.static_dir = Path(__file__).parent / "static"
         return FileResponse(self.static_dir / "index.html")
 
-    async def chat(self, req: ChatRequest, current_user: str = Depends(get_current_user)) -> ChatResponse:
-        """聊天接口：接收用户消息，调用 Agent 并返回 AI 回复"""
-        logger.info("收到消息: user=%s, msg=%s", current_user, req.message[:30])
-        await self.scheduler.update_active(current_user)
 
-        # ---------- 预处理：解析 [ROLE_SELECT] 消息 ----------
+    # chat 方法：仅发布任务，返回 task_id
+    async def chat(self, req: ChatRequest, current_user: str = Depends(get_current_user)):
+        """
+        异步聊天接口。
+        1. 预处理用户消息（角色选择等）。
+        2. 获取当前角色、好感度信息。
+        3. 构造任务负载，发布至 Celery Worker 进行异步 AI 生成。
+        4. 立即返回 task_id，由前端轮询结果。
+        """
+        logger.info("收到异步聊天请求: user=%s, msg=%s", current_user, req.message[:30])
+
+        # 更新用户活跃时间（Redis）
+        try:
+            await self.scheduler.update_active(current_user)
+        except Exception as e:
+            logger.error("更新活跃时间失败: %s", e)
+
+        # ---------- 1. 预处理：[ROLE_SELECT] 指令 ----------
         preset_role = None
         preset_greeting = None
         user_input = req.message
@@ -103,99 +124,110 @@ class EchoSoulAPI:
             role = RoleCatalog.get_role(preset_role)
             preset_greeting = role.greeting
             user_input = ""
-            logger.info("[Main] 预处理角色选择: %s, 开场白: %s", preset_role, preset_greeting[:20])
+            logger.info("[chat] 角色选择指令: %s", preset_role)
 
-        # 从历史状态中恢复角色（使用通用 thread_id 获取最近一次状态，仅用于提取 role_type）
+        # ---------- 2. 从历史状态恢复当前角色 ----------
         try:
             last = self.agent.graph.get_state({"configurable": {"thread_id": current_user}})
             vals = last.values if last else {}
-            # 测试
-            logger.info("[Main] last.values: %s, last: %s", vals, last)
-        except Exception:
+        except Exception as e:
+            logger.warning("无法获取历史状态: %s", e)
             vals = {}
 
-        # 确定最终角色：前端传入 > 预处理 > 历史状态
-        # 角色确定优先级：前端请求字段 > [ROLE_SELECT]解析 > 历史状态
         final_role = req.role_type or preset_role or vals.get("role_type")
 
-        # 为每个角色创建独立的 thread_id，实现对话历史隔离
+        # 生成 thread_id，用于隔离不同角色的对话历史
         thread_id = f"{current_user}:{final_role}" if final_role else current_user
-        config: RunnableConfig = {"configurable": {"thread_id": thread_id}}
-        logger.info("[Main] thread_id: %s", thread_id)
-        logger.info("[Main] 初始化历史记录: %s", self.agent.graph.get_state({"configurable": {"thread_id": thread_id}}))
-        # 异步获取好感度信息（预计算）
+
+        # ---------- 3. 异步获取好感度信息 ----------
         aff_info, unlock_info = await self._get_affection_info(current_user, final_role)
 
+        # ---------- 4. 构造 Celery 任务参数 ----------
+        task_payload = {
+            "user_id": current_user,
+            "role_type": final_role,
+            "user_input": user_input,
+            "preset_greeting": preset_greeting,
+            "aff_info": aff_info,
+            "unlock_info": unlock_info,
+            "thread_id": thread_id,
+            "need_regenerate": False,
+            "regenerate_context": None,
+        }
+
+        # ---------- 5. 处理“重新生成”请求 ----------
         negative_kws = ["不满意", "不认同", "重新说", "换一个", "不想听", "不对"]
-
         if any(kw in req.message for kw in negative_kws):
-            # 用户要求重新生成回复
             try:
-                last =  self.agent.graph.get_state(config)
-                vals = last.values or {}
-            except Exception:
+                last = self.agent.graph.get_state({"configurable": {"thread_id": thread_id}})
+                vals = last.values if last else {}
+            except Exception as e:
+                logger.warning("获取历史状态用于重新生成时出错: %s", e)
                 vals = {}
-
-            # 重新生成时使用历史角色，若没有则用 final_role
-            regen_role = vals.get("role_type", final_role or "温柔贤淑型")
-            logger.info("[Main] regen_role: %s", regen_role)
-            logger.info("[Main] emotion: %s, memory_text: %s",
-                        vals.get("emotion", {"label": "neutral", "score": 0.5}), vals.get("memory_text", ""))
-
-            regen_state: AgentState = {
-                "user_id": current_user,
-                "user_input": req.message,
-                "role_type": regen_role,
-                "emotion": vals.get("emotion", {"label": "neutral", "score": 0.5}),
-                "memory_text": vals.get("memory_text", ""),
-                "final_response": None,
-                "need_regenerate": True,
-                "regenerate_context": {
+            if vals.get("final_response"):
+                task_payload["need_regenerate"] = True
+                task_payload["regenerate_context"] = {
                     "user_msg": vals.get("user_input", ""),
-                    "ai_msg": vals.get("final_response", ""),
-                },
-                "aff_info": aff_info,  # 注入
-                "unlock_info": unlock_info,  # 注入
-            }
-            final =  self.agent.invoke(regen_state, config)
-        else:
-            # 正常对话流程（含角色选择预处理）
-            init_state: AgentState  = {
-                "user_id": current_user,
-                "user_input": user_input,
-                "role_type": final_role,
-                "emotion": vals.get("emotion", {}),
-                "memory_text": vals.get("memory_text", ""),
-                "final_response": preset_greeting,
-                "need_regenerate": False,
-                "regenerate_context": None,
-                "aff_info": aff_info,  # 注入
-                "unlock_info": unlock_info,  # 注入
-            }
+                    "ai_msg": vals.get("final_response", "")
+                }
+                logger.info("[chat] 触发重新生成，原回复: %s", vals.get("final_response", "")[:30])
 
-            # 调试日志（可保留）
-            logger.info("[Main] init_state role_type = %s", init_state.get("role_type"))
-            final = self.agent.invoke(init_state, config)
+        # ---------- 6. 发布 Celery 任务 ----------
+        try:
+            # Celery 的 delay 方法直接传递字典，会自动序列化为 JSON
+            celery_task = process_chat.delay(task_payload)
+            logger.info("[chat] Celery 任务已发布: task_id=%s, user=%s", celery_task.id, current_user)
+            return {"task_id": celery_task.id}
+        except Exception as e:
+            logger.critical("无法发布 Celery 任务: %s", e)
+            raise HTTPException(status_code=503, detail="服务暂时不可用，请稍后重试")
 
-        logger.info("回复: %s", final["final_response"][:30])
 
-        # 在 chat 方法中，return 之前，存储历史之前
-        logger.info("准备存储历史，final_role=%s, msg=%s", final_role, req.message[:30])
+    # 新增轮询接口
+    async def get_chat_result(self, task_id: str):
+        try:
+            task_result = AsyncResult(task_id, app=celery_app)
+            if task_result.ready():
+                if task_result.successful():
+                    # 任务成功，直接返回结果字典
+                    return task_result.result
+                else:
+                    # 任务失败，返回错误信息
+                    return {"error": str(task_result.info)}
+            else:
+                return {"status": "pending"}
+        except Exception as e:
+            logger.error(f"获取任务结果失败: {e}")
+            return {"error": "内部错误"}
 
-        # ---------- 异步后处理：存储聊天历史、更新好感度、存储记忆 ----------
-        await self.agent.finalize_conversation(
+    # ---------- 新增异步接口 ----------
+    async def chat_async(self, req: ChatRequest, current_user: str = Depends(get_current_user)):
+        logger.info("异步聊天请求: user=%s, msg=%s", current_user, req.message[:30])
+        task = process_chat.delay(
             user_id=current_user,
-            role_type=final_role,
-            user_message=req.message,
-            ai_reply=final.get("final_response", ""),
-            emotion=final.get("emotion", {}),
+            message=req.message,
+            role_type=req.role_type
         )
+        return {"task_id": task.id, "status": "pending"}
 
-        return ChatResponse(
-            reply=final["final_response"],
-            emotion=final.get("emotion", {}),
-            role=final.get("role_type"),
-        )
+    async def get_chat_result(self, task_id: str):
+        result = AsyncResult(task_id, app=celery_app)
+        if result.ready():
+            if result.successful():
+                data = result.result
+                return ChatResponse(
+                    reply=data["reply"],
+                    emotion=data["emotion"],
+                    role=data["role"]
+                )
+            else:
+                return JSONResponse(
+                    status_code=500,
+                    content={"detail": f"任务执行失败: {str(result.info)}"}
+                )
+        else:
+            return {"status": "processing", "task_id": task_id}
+
 
     async def _get_affection_info(self, role_type: str, current_user: str = Depends(get_current_user)) -> tuple[str, str]:
         """获取预计算的好感度文本"""
@@ -307,8 +339,12 @@ class EchoSoulAPI:
         # ---------- 注册路由 ----------
         # 需要认证的路由统一添加 dependencies
         auth_deps = [Depends(get_current_user)]
-        app.add_api_route("/chat", self.chat, methods=["POST"], response_model=ChatResponse,
-                          dependencies=auth_deps)
+        app.add_api_route(
+            "/chat",
+            self.chat,
+            methods=["POST"],
+            dependencies=auth_deps
+        )
         app.add_api_route(
             "/affection/{role_type}",
             self.get_affection,
@@ -316,7 +352,12 @@ class EchoSoulAPI:
             response_model=AffectionResponse,
             dependencies=auth_deps
         )
-        app.add_api_route("/active_messages", self.get_active_messages, methods=["GET"],dependencies=auth_deps)
+        app.add_api_route(
+            "/active_messages",
+            self.get_active_messages,
+            methods=["GET"],
+            dependencies=auth_deps
+        )
 
         # 在 build_app 方法内，其他路由注册之后添加
         app.add_api_route(
@@ -330,6 +371,13 @@ class EchoSoulAPI:
             "/chat_history/{role_type}",
             self.delete_chat_history,
             methods=["DELETE"],
+            dependencies=auth_deps
+        )
+
+        app.add_api_route(
+            "/chat/result/{task_id}",
+            self.get_chat_result,
+            methods=["GET"],
             dependencies=auth_deps
         )
 

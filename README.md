@@ -10,9 +10,11 @@ EchoSoul 是一个基于大语言模型的智能陪伴系统，旨在为用户�
 
 
 
+celery -A app.celery_app worker --loglevel=info -P threads
+
 uvicorn app.main:create_app --factory --host 127.0.0.1 --port 9000 --reload
 
-uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000 
+uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000 --workers 2
 
 # 使用清华源安装
 pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple

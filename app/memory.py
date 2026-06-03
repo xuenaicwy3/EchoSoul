@@ -5,7 +5,7 @@
 import logging
 import uuid
 import chromadb
-
+from chromadb import PersistentClient
 from datetime import datetime
 from langchain.chat_models import init_chat_model
 from langchain_community.embeddings import DashScopeEmbeddings
@@ -27,22 +27,24 @@ class MemoryService(MemoryManager):
             dashscope_api_key=settings.DASHSCOPE_API_KEY,
         )
         # Chroma 持久化客户端
-        self.client = chromadb.PersistentClient(path=settings.CHROMA_PATH)
-        # 先删除旧集合（避免遗留嵌入函数）
+        self.client = PersistentClient(path=settings.CHROMA_PATH)
+
+        # 安全地获取或创建集合（不删除，避免并发问题）
         try:
-            self.client.delete_collection(settings.COLLECTION_NAME)
-        except:
-            pass
-        # self.collection = self.client.get_or_create_collection(
-        #     name=settings.COLLECTION_NAME,
-        #     metadata={"hnsw:space": "cosine"},   # 使用余弦相似度
-        #     embedding_function=None  # 禁用 Chroma 自带嵌入，避免下载模型
-        # )
-        self.collection = self.client.create_collection(
-            name=settings.COLLECTION_NAME,
-            metadata={"hnsw:space": "cosine"},   # 使用余弦相似度
-            embedding_function=None
-        )
+            self.collection = self.client.get_collection(
+                name=settings.COLLECTION_NAME,
+                embedding_function=None,
+            )
+            logger.info("成功加载已有记忆集合")
+        except Exception:
+            # 集合不存在，创建新集合
+            self.collection = self.client.create_collection(
+                name=settings.COLLECTION_NAME,
+                metadata={"hnsw:space": "cosine"},
+                embedding_function=None,
+            )
+            logger.info("创建新的记忆集合")
+
         # 记忆摘要 LLM（轻量）
         self.summary_llm = init_chat_model(
             model=settings.LLM_MODEL,
@@ -139,12 +141,6 @@ class MemoryService(MemoryManager):
             )
             # ---- 新增调试日志 ----
             docs = results.get("documents")
-            metas = results.get("metadatas")
-            logger.info("[Memory] 查询 user_id=%s, 返回 %d 个结果", user_id, len(docs[0]) if docs and docs[0] else 0)
-            if docs and docs[0]:
-                for i, (doc, meta) in enumerate(zip(docs[0], metas[0])):
-                    logger.info(f"[Memory] 结果{i + 1}: {doc[:50]}... (情绪:{meta.get('emotion')})")
-
             if not docs or not docs[0]:
                 logger.info("[Memory] 未检索到相关记忆 (user=%s, role=%s)", user_id[:8], role_type)
                 return "暂无记忆"
@@ -156,7 +152,6 @@ class MemoryService(MemoryManager):
                 if meta.get("emotion"):
                     mem += f" (当时情绪:{meta['emotion']})"
                 memories.append(mem)
-
             logger.info("检索到 %d 条记忆", len(memories))
             return "\n".join(memories)
         except Exception as e:

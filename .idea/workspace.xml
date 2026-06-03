@@ -4,27 +4,25 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="386caada-63df-470c-a0c1-925864ae15ee" name="更改" comment="Redis在scheduler.py中具体使用">
-      <change afterPath="$PROJECT_DIR$/app/auth.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/dependencies.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/models/user.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/routers/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/routers/auth_router.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/static/chat.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/static/home.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/static/login.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/static/register.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/static/style.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test_auth.py" afterDir="false" />
+    <list default="true" id="386caada-63df-470c-a0c1-925864ae15ee" name="更改" comment="用户认证与数据隔离">
+      <change afterPath="$PROJECT_DIR$/app/celery_app.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/checkpoint_setup.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/rate_limit.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/redis_saver.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/tasks.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/worker.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/celery_app.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/locustfile.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/agent.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/database.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/models/schemas.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/schemas.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/static/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/static/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/memory.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/memory.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/redis_client.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/redis_client.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/scheduler.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/scheduler.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/static/chat.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/static/chat.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/static/script.js" beforeDir="false" afterPath="$PROJECT_DIR$/app/static/script.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/数据库使用.md" beforeDir="false" afterPath="$PROJECT_DIR$/数据库使用.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -61,11 +59,11 @@
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="HighlightingSettingsPerFile">
-    <setting file="file://$PROJECT_DIR$/agent.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/app/main.py" root0="SKIP_INSPECTION" />
     <setting file="file://$PROJECT_DIR$/../../envs/EchoSoul/Lib/site-packages/langchain_openai/chat_models/base.py" root0="SKIP_INSPECTION" />
   </component>
   <component name="ProblemsViewState">
-    <option name="selectedTabId" value="DEPENDENCY_CHECKER_PROBLEMS_TAB" />
+    <option name="selectedTabId" value="CurrentFile" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 2
@@ -275,6 +273,10 @@
       <workItem from="1780310705248" duration="269000" />
       <workItem from="1780310991464" duration="19399000" />
       <workItem from="1780371335033" duration="2602000" />
+      <workItem from="1780377734427" duration="10160000" />
+      <workItem from="1780388113491" duration="394000" />
+      <workItem from="1780388524749" duration="21433000" />
+      <workItem from="1780455843088" duration="6792000" />
     </task>
     <task id="LOCAL-00001" summary="项目初始化">
       <option name="closed" value="true" />
@@ -364,7 +366,23 @@
       <option name="project" value="LOCAL" />
       <updated>1780321566010</updated>
     </task>
-    <option name="localTasksCounter" value="12" />
+    <task id="LOCAL-00012" summary="多用户使用-隔离每个用户与所有角色类型之间的聊天记录">
+      <option name="closed" value="true" />
+      <created>1780377911069</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1780377911069</updated>
+    </task>
+    <task id="LOCAL-00013" summary="用户认证与数据隔离">
+      <option name="closed" value="true" />
+      <created>1780385728182</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1780385728182</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -392,7 +410,9 @@
     <MESSAGE value="与所有虚拟角色的历史聊天记录进行存储和查询" />
     <MESSAGE value="使用PostgreSQL数据库存储所有虚拟角色的历史聊天记录" />
     <MESSAGE value="Redis在scheduler.py中具体使用" />
-    <option name="LAST_COMMIT_MESSAGE" value="Redis在scheduler.py中具体使用" />
+    <MESSAGE value="多用户使用-隔离每个用户与所有角色类型之间的聊天记录" />
+    <MESSAGE value="用户认证与数据隔离" />
+    <option name="LAST_COMMIT_MESSAGE" value="用户认证与数据隔离" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
