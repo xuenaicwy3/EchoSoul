@@ -4,12 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="386caada-63df-470c-a0c1-925864ae15ee" name="更改" comment="高并发场景调试-解决记忆存储丢失问题">
+    <list default="true" id="386caada-63df-470c-a0c1-925864ae15ee" name="更改" comment="mock高并发场景测试">
+      <change afterPath="$PROJECT_DIR$/高并发场景处理总结.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/memory.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/memory.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/tasks.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/tasks.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -290,7 +287,7 @@
       <workItem from="1780388524749" duration="21433000" />
       <workItem from="1780455843088" duration="6792000" />
       <workItem from="1780462918441" duration="3989000" />
-      <workItem from="1780467054856" duration="8877000" />
+      <workItem from="1780467054856" duration="17515000" />
     </task>
     <task id="LOCAL-00001" summary="项目初始化">
       <option name="closed" value="true" />
@@ -420,7 +417,15 @@
       <option name="project" value="LOCAL" />
       <updated>1780475212681</updated>
     </task>
-    <option name="localTasksCounter" value="17" />
+    <task id="LOCAL-00017" summary="mock高并发场景测试">
+      <option name="closed" value="true" />
+      <created>1780476507707</created>
+      <option name="number" value="00017" />
+      <option name="presentableId" value="LOCAL-00017" />
+      <option name="project" value="LOCAL" />
+      <updated>1780476507707</updated>
+    </task>
+    <option name="localTasksCounter" value="18" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -453,7 +458,8 @@
     <MESSAGE value="celery+redis+postgresql+worker处理高并发场景" />
     <MESSAGE value="locust性能测试 高并发场景" />
     <MESSAGE value="高并发场景调试-解决记忆存储丢失问题" />
-    <option name="LAST_COMMIT_MESSAGE" value="高并发场景调试-解决记忆存储丢失问题" />
+    <MESSAGE value="mock高并发场景测试" />
+    <option name="LAST_COMMIT_MESSAGE" value="mock高并发场景测试" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
