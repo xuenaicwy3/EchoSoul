@@ -52,28 +52,40 @@ logger = logging.getLogger(__name__)
 
 
 class EchoSoulAPI:
+    """EchoSoul 应用核心类，负责组装服务、注册路由并返回 FastAPI 实例"""
+
     def __init__(self):
+        # ---------- 1. 加载配置 ----------
         self.settings = Settings()
         setup_logging(self.settings)
+        logger.info("正在初始化 EchoSoulAPI ...")
+
+        # ---------- 2. 实例化所有依赖服务（依赖注入） ----------
         self.emotion_service = EmotionService(self.settings)
-        self.memory_service = MemoryService(self.settings)
         self.affection_service = AffectionService()
+        self.memory_service = MemoryService(self.settings)          # 直接创建记忆服务
         self.scheduler = ProactiveScheduler(self.settings, self.affection_service)
+
+        # 创建 Agent 时传入真实记忆服务
         self.agent = EchoSoulAgent(
             self.settings,
             self.emotion_service,
-            self.memory_service,
-            self.affection_service,
+            memory_svc=self.memory_service,          # 传入真实服务
+            affection_svc=self.affection_service,
         )
-        self.static_dir = Path(__file__).parent / "static"
         self.chat_history = ChatHistoryManager()
+        # 静态文件目录
+        self.static_dir = Path(__file__).parent / "static"
+        logger.info("所有服务已实例化")
 
+    # ---------- 生命周期 ----------
     @asynccontextmanager
     async def lifespan(self, app: FastAPI):
+        """应用生命周期：启动时初始化数据库、Redis，启动后处理 Worker"""
         await init_db(self.settings)
         await init_redis(self.settings)
 
-        # 启动后处理 Worker
+        # 启动后处理 Worker（唯一操作记忆的协程，避免多进程竞争）
         self.postprocess_task = asyncio.create_task(process_postprocess_stream(self.agent))
         self.scheduler.start()
         logger.info("后台服务已启动")
@@ -82,6 +94,7 @@ class EchoSoulAPI:
         self.scheduler.shutdown()
         await close_redis()
         await close_db()
+        logger.info("后台服务已关闭")
 
 
 

@@ -1,6 +1,7 @@
-# app/agent.py (修改后完整版)
+# app/agent.py (高并发修复版)
+import asyncio
 import logging
-from typing import Optional, cast, Any
+from typing import Optional, Any
 
 import psycopg
 from langgraph.checkpoint.base import BaseCheckpointSaver
@@ -9,8 +10,6 @@ from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.postgres import PostgresSaver
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain.chat_models import init_chat_model
-from psycopg_pool import AsyncConnectionPool
-import asyncpg
 from app.chat_history import ChatHistoryManager
 from app.config import Settings
 from app.roles import RoleCatalog
@@ -20,9 +19,7 @@ from app.memory import MemoryService
 from app.affection import AffectionService
 from app.models.schemas import AgentState
 from langchain_core.runnables import RunnableConfig
-from psycopg_pool import AsyncConnectionPool
-from langgraph.checkpoint.postgres import PostgresSaver
-from urllib.parse import urlparse
+
 logger = logging.getLogger(__name__)
 
 
@@ -35,12 +32,13 @@ class EchoSoulAgent:
         self,
         settings: Settings,
         emotion_svc: EmotionService,
-        memory_svc: MemoryService,
-        affection_svc: AffectionService,
-        checkpointer: Optional[BaseCheckpointSaver] = None,  # 新增参数，允许外部注入检查点
+        memory_svc: MemoryService,                             # 必须传入真实 MemoryService
+        affection_svc: Optional[AffectionService] = None,
+        checkpointer: Optional[BaseCheckpointSaver] = None,
     ):
         self.chat_history: ChatHistoryManager = ChatHistoryManager()
         self.settings = settings
+
         # 主对话 LLM
         self.llm = init_chat_model(
             model=settings.LLM_MODEL,
@@ -51,12 +49,11 @@ class EchoSoulAgent:
             base_url=settings.DASHSCOPE_BASE_URL,
         )
         self.emotion_svc = emotion_svc
-        self.memory_svc = memory_svc
-        self.affection_svc = affection_svc
+        self.affection_svc = affection_svc or AffectionService()
+        self.memory_svc = memory_svc                              # 直接保存真实服务
 
-        # 检查点：优先使用外部注入，否则默认使用内存保存器（开发/单机模式）
+        # 检查点
         self.checkpointer = checkpointer or MemorySaver()
-        # 构建 LangGraph 状态图
         self.graph = self._build_graph()
         logger.info("EchoSoulAgent 初始化完成，对话模型=%s", settings.LLM_MODEL)
 
@@ -65,7 +62,6 @@ class EchoSoulAgent:
         dsn = self.settings.DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://")
         if '?' in dsn:
             dsn = dsn.split('?')[0]
-        # 创建 psycopg 异步连接（不是 asyncpg）
         self.conn = await psycopg.AsyncConnection.connect(dsn)
         self.checkpointer = PostgresSaver(self.conn)
         self.checkpointer.setup()
@@ -76,7 +72,6 @@ class EchoSoulAgent:
         if self.conn:
             await self.conn.close()
             logger.info("PostgresSaver 连接已关闭")
-
 
     def _build_graph(self):
         if self.checkpointer is None:
@@ -94,11 +89,10 @@ class EchoSoulAgent:
         workflow.add_edge("generate", END)
 
         compiled = workflow.compile(checkpointer=self.checkpointer)
-        logger.info("LangGraph 状态图构建完成（使用 PostgresSaver）")
+        logger.info("LangGraph 状态图构建完成")
         return compiled
 
     def _select_role_node(self, state: AgentState) -> AgentState:
-        # 与原代码相同，保持不变
         user_msg = state.get("user_input", "")
         if user_msg.startswith("[ROLE_SELECT]"):
             logger.info("[select_role] 角色已由 HTTP 层预设，当前 role_type = %s", state.get("role_type"))
@@ -124,6 +118,7 @@ class EchoSoulAgent:
     def _memory_node(self, state: AgentState) -> AgentState:
         user_msg = state["user_input"]
         role_type = state.get("role_type", "温柔贤淑型")
+        # retrieve 是同步方法，在 Celery 同步任务中直接调用
         mem_text = self.memory_svc.retrieve(
             user_id=state["user_id"],
             query=user_msg,
@@ -178,6 +173,14 @@ class EchoSoulAgent:
                 role_type=role_type,
                 sender="ai",
                 message=ai_reply)
+
         delta = self.affection_svc.calculate_delta(user_message, ai_reply, emotion)
         await self.affection_svc.update(user_id, role_type, delta)
-        self.memory_svc.store(user_id, user_message, ai_reply, emotion, role_type)
+
+        # 记忆存储是同步方法，用线程池执行，避免阻塞事件循环
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(
+            None,
+            self.memory_svc.store,
+            user_id, user_message, ai_reply, emotion, role_type
+        )

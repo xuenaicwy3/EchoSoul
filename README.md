@@ -8,7 +8,9 @@ EchoSoul 是一个基于大语言模型的智能陪伴系统，旨在为用户�
 - 📝 支持对话记忆，提供连续、个性化的交流
 - 💬 轻量部署，快速接入
 
+chroma run --host localhost --port 8000 --path ./chroma_data
 
+locust -f locustfile.py --host=http://127.0.0.1:8000
 
 celery -A app.celery_app worker --loglevel=info -P threads
 

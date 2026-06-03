@@ -2,6 +2,7 @@
 主动消息调度器
 使用 APScheduler 异步调度，定期检查非活跃用户并生成主动消息
 """
+import asyncio
 import logging
 from datetime import datetime, timedelta
 from typing import List
@@ -78,7 +79,9 @@ class ProactiveScheduler:
                     prompt = PromptFactory.proactive_message(
                         role.name, role.persona, avg_aff
                     )
-                    msg = self.llm.invoke(prompt).content.strip()
+                    loop = asyncio.get_running_loop()
+                    resp = await loop.run_in_executor(None, self.llm.invoke, prompt)
+                    msg = resp.content.strip()
                     await redis.rpush(pending_key, msg)
                     logger.info("已为用户 %s 生成主动消息", uid[:8])
             if cursor == 0:

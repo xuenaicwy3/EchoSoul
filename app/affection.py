@@ -5,6 +5,7 @@ from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from app.database import get_async_session
 from app.models.db_models import Affection as AffectionModel
+from sqlalchemy import update, func   # 顶部添加导入
 
 logger = logging.getLogger(__name__)
 
@@ -23,33 +24,43 @@ class AffectionService:
                 return {"intimacy": row.intimacy, "trust": row.trust, "fun": row.fun, "growth": row.growth}
             return {"intimacy": 10.0, "trust": 10.0, "fun": 10.0, "growth": 10.0}
 
-    async def update(self, user_id: str, role_type: str, delta: Dict[str, float]):
-        current = await self.get(user_id, role_type)
-        new_vals = {}
-        for dim in ["intimacy", "trust", "fun", "growth"]:
-            new_vals[dim] = max(0.0, min(100.0, current[dim] + delta.get(dim, 0.0)))
+    from sqlalchemy import update, func  # 顶部添加导入
 
+    async def update(self, user_id: str, role_type: str, delta: Dict[str, float]):
         async_session = get_async_session()
         async with async_session() as session:
             async with session.begin():
-                stmt = pg_insert(AffectionModel).values(
-                    user_id=user_id, role_type=role_type,
-                    intimacy=new_vals["intimacy"], trust=new_vals["trust"],
-                    fun=new_vals["fun"], growth=new_vals["growth"],
-                    last_interaction=datetime.utcnow()
+                # 原子增量更新，同时限制范围 0~100
+                stmt = (
+                    update(AffectionModel)
+                    .where(
+                        AffectionModel.user_id == user_id,
+                        AffectionModel.role_type == role_type
+                    )
+                    .values(
+                        intimacy=func.least(100.0,
+                                            func.greatest(0.0, AffectionModel.intimacy + delta.get("intimacy", 0.0))),
+                        trust=func.least(100.0, func.greatest(0.0, AffectionModel.trust + delta.get("trust", 0.0))),
+                        fun=func.least(100.0, func.greatest(0.0, AffectionModel.fun + delta.get("fun", 0.0))),
+                        growth=func.least(100.0, func.greatest(0.0, AffectionModel.growth + delta.get("growth", 0.0))),
+                        last_interaction=datetime.utcnow()
+                    )
                 )
-                stmt = stmt.on_conflict_do_update(
-                    index_elements=[AffectionModel.user_id, AffectionModel.role_type],
-                    set_={
-                        "intimacy": stmt.excluded.intimacy,
-                        "trust": stmt.excluded.trust,
-                        "fun": stmt.excluded.fun,
-                        "growth": stmt.excluded.growth,
-                        "last_interaction": stmt.excluded.last_interaction
-                    }
-                )
-                await session.execute(stmt)
-            logger.info("好感度更新: %s -> %s", role_type, new_vals)
+                result = await session.execute(stmt)
+
+                # 如果没有命中行，说明记录还不存在，插入初始值
+                if result.rowcount == 0:
+                    session.add(AffectionModel(
+                        user_id=user_id,
+                        role_type=role_type,
+                        intimacy=min(100.0, max(0.0, 10.0 + delta.get("intimacy", 0))),
+                        trust=min(100.0, max(0.0, 10.0 + delta.get("trust", 0))),
+                        fun=min(100.0, max(0.0, 10.0 + delta.get("fun", 0))),
+                        growth=min(100.0, max(0.0, 10.0 + delta.get("growth", 0))),
+                        last_interaction=datetime.utcnow()
+                    ))
+
+            logger.info("好感度已更新: user=%s, role=%s", user_id[:8], role_type)
 
     def calculate_delta(self, user_msg: str, ai_response: str, emotion: dict) -> Dict[str, float]:
         delta = {"intimacy": 0.5, "trust": 0.3, "fun": 0.0, "growth": 0.0}

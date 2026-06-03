@@ -13,7 +13,6 @@ from app.config import Settings
 
 settings = Settings()
 
-# 缓存 Agent 实例（线程安全）
 _agent = None
 _lock = threading.Lock()
 
@@ -23,26 +22,23 @@ def _build_agent():
         with _lock:
             if _agent is None:
                 emotion_svc = EmotionService(settings)
-                memory_svc = MemoryService(settings)
                 affection_svc = AffectionService()
-                # 使用 psycopg (v3) 同步连接
+                memory_svc = MemoryService(settings)          # ✅ 已添加
                 pg_conn = psycopg.connect(
                     "postgresql://echosoul:123456@localhost:5432/echosoul?sslmode=disable"
                 )
                 checkpointer = PostgresSaver(pg_conn)
                 _agent = EchoSoulAgent(
-                    settings, emotion_svc, memory_svc, affection_svc,
+                    settings,
+                    emotion_svc=emotion_svc,
+                    memory_svc=memory_svc,                    # ✅ 已传入
+                    affection_svc=affection_svc,
                     checkpointer=checkpointer
                 )
     return _agent
 
 @shared_task(name='process_chat')
 def process_chat(task_payload: dict) -> dict:
-    """
-    处理聊天任务
-    参数 task_payload 是字典，由 Celery 自动反序列化
-    """
-    # 直接使用字典，无需 json.loads
     task_id = task_payload.get("task_id")
     user_id = task_payload["user_id"]
     role_type = task_payload["role_type"]
@@ -71,7 +67,6 @@ def process_chat(task_payload: dict) -> dict:
     agent = _build_agent()
     result = agent.invoke(init_state, config)
 
-    # 将后处理任务推送到 Redis Stream（使用同步客户端）
     r = redis.Redis.from_url(settings.REDIS_URL)
     postprocess_data = {
         "user_id": user_id,

@@ -41,6 +41,7 @@ async def init_db(settings: Settings):
 
     # 创建表及分区迁移
     async with engine.begin() as conn:
+        # 创建所有表
         await conn.run_sync(Base.metadata.create_all)
         await _ensure_partitioned_chat_history(conn)
         # 防止主键序列冲突

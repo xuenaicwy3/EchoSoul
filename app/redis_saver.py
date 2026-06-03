@@ -33,21 +33,15 @@ class RedisSaver(BaseCheckpointSaver):
 
     # ---- 同步接口（LangGraph 在某些路径会调用，如 graph.get_state） ----
     def get_tuple(self, config: dict) -> Optional[CheckpointTuple]:
-        """同步包装，直接运行异步方法"""
         try:
             loop = asyncio.get_running_loop()
+            if loop.is_running():
+                import concurrent.futures
+                future = asyncio.run_coroutine_threadsafe(self.aget(config), loop)
+                return future.result(timeout=5)
         except RuntimeError:
-            loop = None
-        if loop is not None and loop.is_running():
-            # 当前在事件循环中，不能使用 run_until_complete，需要创建一个 future 并等待？
-            # 实际上，在异步上下文中，这个同步方法本不应该被调用，但 LangGraph 可能会。
-            # 我们采用 run_coroutine_threadsafe 方式调用，但这里简单返回 None，因为主要使用场景是在同步测试中。
-            # 对于生产，我们确保主流程使用异步方法。
-            # 更安全的方式：直接抛出异常，引导使用异步方法。
-            raise RuntimeError("Cannot call synchronous get_tuple from within an async context. Use await acheckpoint.aget() instead.")
-        else:
-            # 不在事件循环中（例如测试或独立线程），可以安全运行
-            return asyncio.run(self.aget(config))
+            pass
+        return asyncio.run(self.aget(config))
 
     def put(self, config: dict, checkpoint: dict, metadata: dict) -> None:
         """同步包装"""
