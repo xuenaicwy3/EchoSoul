@@ -1,3 +1,4 @@
+import asyncio
 import json
 import threading
 import redis
@@ -5,6 +6,7 @@ import psycopg
 from celery import shared_task
 from langgraph.checkpoint.postgres import PostgresSaver
 
+from app.affective_memory_service import AffectiveMemoryService
 from app.agent import EchoSoulAgent
 from app.emotions import EmotionService
 from app.memory import MemoryService
@@ -35,10 +37,15 @@ def _build_agent():
                     affection_svc=affection_svc,
                     checkpointer=checkpointer
                 )
+                # 给 Agent 注入情感记忆服务
+                _agent.affective_memory_svc = AffectiveMemoryService(settings)
     return _agent
 
 @shared_task(name='process_chat')
 def process_chat(task_payload: dict) -> dict:
+    """
+     处理聊天任务（同步任务，内部用 asyncio.run 调用异步 Agent）
+     """
     # ========== 测试模式：全部使用假数据，不调 AI ==========
     if settings.TEST_MODE:
         user_id = task_payload["user_id"]
@@ -91,8 +98,10 @@ def process_chat(task_payload: dict) -> dict:
     config = {"configurable": {"thread_id": thread_id}}
 
     agent = _build_agent()
+    # 使用同步 invoke，确保检查点正常工作
     result = agent.invoke(init_state, config)
 
+    # 推送后处理数据到 Redis Stream（使用同步客户端）
     r = redis.Redis.from_url(settings.REDIS_URL)
     postprocess_data = {
         "user_id": user_id,
@@ -102,6 +111,7 @@ def process_chat(task_payload: dict) -> dict:
         "emotion": result.get("emotion", {}),
     }
     r.xadd("postprocess_stream", {"data": json.dumps(postprocess_data)})
+
 
     return {
         "reply": result.get("final_response", ""),

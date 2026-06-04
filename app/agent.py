@@ -10,6 +10,8 @@ from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.postgres import PostgresSaver
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain.chat_models import init_chat_model
+
+from app.affective_memory_service import AffectiveMemoryService
 from app.chat_history import ChatHistoryManager
 from app.config import Settings
 from app.roles import RoleCatalog
@@ -51,6 +53,7 @@ class EchoSoulAgent:
         self.emotion_svc = emotion_svc
         self.affection_svc = affection_svc or AffectionService()
         self.memory_svc = memory_svc          # 直接保存真实服务
+        self.affective_memory_svc = AffectiveMemoryService(settings)
 
         # 检查点
         self.checkpointer = checkpointer or MemorySaver()
@@ -118,16 +121,53 @@ class EchoSoulAgent:
         return state
 
     def _memory_node(self, state: AgentState) -> AgentState:
+        user_id = state["user_id"]
         user_msg = state["user_input"]
-        role_type = state.get("role_type", "温柔贤淑型")
+        role_type = state.get("role_type", "日系动漫型")
+
         # retrieve 是同步方法，在 Celery 同步任务中直接调用（测试模式下返回假记忆，见 memory.py）
-        mem_text = self.memory_svc.retrieve(
-            user_id=state["user_id"],
-            query=user_msg,
-            role_type=role_type
-        )
-        state["memory_text"] = mem_text
+        # 1. 原有 Chroma 语义检索（同步）
+        chroma_mem = self.memory_svc.retrieve(user_id=user_id, query=user_msg, role_type=role_type)
+
+        # 2. 情感记忆系统（异步 → 用 asyncio.run 在同步节点中执行）
+        structured_mem = ""
+        if hasattr(self, 'affective_memory_svc'):
+            async def _fetch_affective_memory():
+                parts = []
+                # 事实
+                facts = await self.affective_memory_svc.get_facts(user_id, role_type)
+                if facts:
+                    fact_lines = "\n".join([f"- {f['key']}: {f['value']}" for f in facts])
+                    parts.append(f"关于用户的已知信息：\n{fact_lines}")
+                # 情感趋势
+                trend = await self.affective_memory_svc.get_emotion_trend(user_id, role_type, limit=5)
+                if trend['records']:
+                    recent = ", ".join([f"{r['label']}({r['score']:.1f})" for r in trend['records'][-3:]])
+                    parts.append(f"用户最近情绪: {recent}，主导情绪: {trend['dominant_emotion']}，趋势: {trend['trend']}")
+                # 里程碑
+                milestones = await self.affective_memory_svc.get_milestones(user_id, role_type)
+                if milestones:
+                    milestone_text = "重要事件：\n" + "\n".join(
+                        [f"- {m['event']} ({m['time'][:10]})" for m in milestones[:3]])
+                    parts.append(milestone_text)
+                # 记忆摘要（新增）
+                # summary = await self.affective_memory_svc.get_memory_summary(user_id, role_type)
+                # logger.info("[memory_node] 获取 用户画像摘要: %s", summary)
+                # if summary:
+                #     parts.append(f"【用户画像摘要】{summary}")
+                #     # logger.info("[memory_node] 获取 用户画像摘要: %s", summary)
+                return "\n".join(parts)
+
+            try:
+                structured_mem = asyncio.run(_fetch_affective_memory())
+            except Exception as e:
+                logger.error(f"情感记忆检索失败: {e}")
+
+        # 组合最终记忆
+        parts = [chroma_mem, structured_mem]
+        state["memory_text"] = "\n".join([p for p in parts if p])
         return state
+
 
     def _generate_node(self, state: AgentState) -> AgentState:
         # 测试模式下直接返回固定回复
@@ -168,6 +208,16 @@ class EchoSoulAgent:
         result = self.graph.invoke(state, config)
         return result
 
+    async def ainvoke(self, state: AgentState, config: RunnableConfig = None) -> AgentState:
+        if config is None:
+            config = {"configurable": {"thread_id": state.get("user_id", "default")}}
+        logger.info("Agent.ainvoke 开始, thread_id=%s", config["configurable"]["thread_id"])
+        result = await self.graph.ainvoke(state, config)
+
+        logger.info("Agent.ainvoke 结束, 回复长度=%d", len(result.get("final_response", "")))
+        return result
+
+
     async def finalize_conversation(self, user_id: str, role_type: str, user_message: str,
                                     ai_reply: str, emotion: dict):
         # 存储聊天记录（始终执行）
@@ -182,10 +232,38 @@ class EchoSoulAgent:
         delta = self.affection_svc.calculate_delta(user_message, ai_reply, emotion)
         await self.affection_svc.update(user_id, role_type, delta)
 
-        # 记忆存储是同步方法，放到线程池避免阻塞事件循环（测试模式在 store 内部处理）
+        # 记忆存储（同步方法，放到线程池避免阻塞事件循环）
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(
             None,
             self.memory_svc.store,
             user_id, user_message, ai_reply, emotion, role_type
         )
+
+        # ---------- 情感记忆系统（非关键路径，失败不影响主流程） ----------
+        if hasattr(self, 'affective_memory_svc'):
+            # 事实提取
+            try:
+                await self.affective_memory_svc.extract_facts_from_conversation(
+                    user_id, role_type, user_message, ai_reply
+                )
+            except Exception as e:
+                logger.error(f"事实提取失败: {e}")
+
+            # 情感记录
+            try:
+                await self.affective_memory_svc.record_emotion(
+                    user_id, role_type, emotion.get('label', 'neutral'),
+                    emotion.get('score', 0.5), user_message
+                )
+            except Exception as e:
+                logger.error(f"情感记录失败: {e}")
+
+            # 里程碑检查
+            try:
+                aff = await self.affection_svc.get(user_id, role_type)
+                await self.affective_memory_svc.check_and_add_milestones(
+                    user_id, role_type, aff.get('intimacy', 0)
+                )
+            except Exception as e:
+                logger.error(f"里程碑检查失败: {e}")

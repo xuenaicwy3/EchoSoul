@@ -42,3 +42,4 @@ def on_worker_ready(**kwargs):
     # 这里不需要 asyncio.run，因为 init_db 是异步的，但检查点用同步连接。
     # 我们可以在 tasks.py 中创建 PostgresSaver 时使用同步连接。
     print("[Celery Worker] Worker 就绪")
+

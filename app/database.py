@@ -20,6 +20,10 @@ from app.models.db_models import (
     UserSkin,
     Story,
     StoryNode,
+    UserFact,
+    EmotionRecord,
+    RelationshipMilestone,
+    UserMemorySummary
 )
 
 

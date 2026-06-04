@@ -145,3 +145,54 @@ class StoryNode(Base):
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     story = relationship("Story", back_populates="nodes")
 
+
+
+# ==================== 情感记忆系统（模块二） ====================
+
+class UserFact(Base):
+    """事实层：存储用户基础信息（姓名、生日、喜好等）"""
+    __tablename__ = "user_facts"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(64), nullable=False, index=True)
+    role_type = Column(String(64), nullable=False)
+    key = Column(String(128), nullable=False)               # 事实类型，如 "name", "birthday", "likes"
+    value = Column(Text, nullable=False)                    # 事实内容
+    source = Column(String(32), default="extracted")        # extracted / manual
+    created_at = Column(DateTime(timezone=True), server_default=text("(now() AT TIME ZONE 'utc')"))
+    updated_at = Column(DateTime(timezone=True), server_default=text("(now() AT TIME ZONE 'utc')"),
+                        onupdate=lambda: datetime.now(timezone.utc))
+
+class EmotionRecord(Base):
+    """情感层：记录每次对话的情感标签与得分"""
+    __tablename__ = "emotion_records"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(64), nullable=False, index=True)
+    role_type = Column(String(64), nullable=False)
+    label = Column(String(32), nullable=False)              # emotion label
+    score = Column(Float, nullable=False)
+    message = Column(Text, nullable=True)                   # 用户原话（可选）
+    created_at = Column(DateTime(timezone=True), server_default=text("(now() AT TIME ZONE 'utc')"))
+
+class RelationshipMilestone(Base):
+    """关系层：记录共同事件、重要时刻、关系里程碑"""
+    __tablename__ = "relationship_milestones"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(64), nullable=False, index=True)
+    role_type = Column(String(64), nullable=False)
+    event = Column(String(255), nullable=False)             # 事件描述
+    event_type = Column(String(32), nullable=False)         # first_chat, intimacy_level, special_moment
+    details = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=text("(now() AT TIME ZONE 'utc')"))
+
+
+class UserMemorySummary(Base):
+    """记忆摘要缓存"""
+    __tablename__ = "user_memory_summaries"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(64), nullable=False, index=True)
+    role_type = Column(String(64), nullable=False)
+    summary = Column(Text, nullable=False)
+    emotion_count = Column(Integer, default=0)           # 生成摘要时的情感记录数
+    created_at = Column(DateTime(timezone=True), server_default=text("(now() AT TIME ZONE 'utc')"))
+    updated_at = Column(DateTime(timezone=True), server_default=text("(now() AT TIME ZONE 'utc')"),
+                        onupdate=lambda: datetime.now(timezone.utc))

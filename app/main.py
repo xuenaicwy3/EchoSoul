@@ -35,7 +35,7 @@ from langchain_core.runnables import RunnableConfig
 from app.roles import RoleCatalog
 from app.chat_history import ChatHistoryManager
 from app.dependencies import get_current_user
-from app.routers import auth_router
+from app.routers import auth_router, affective_memory_router
 from app.models.user import User
 from app.redis_client import get_task_result as redis_get_task_result
 from app.redis_saver import RedisSaver
@@ -210,10 +210,14 @@ class EchoSoulAPI:
             if task_result.ready():
                 if task_result.successful():
                     # 任务成功，直接返回结果字典
-                    return task_result.result
+                    result = task_result.result
+                    logger.info(f"任务 {task_id[:8]} 结果: {result.get('reply', '')[:30]}...")
+                    return result
                 else:
                     # 任务失败，返回错误信息
-                    return {"error": str(task_result.info)}
+                    error = str(task_result.info)
+                    logger.error(f"任务 {task_id[:8]} 失败: {error}")
+                    return {"error": f"任务执行失败: {error}"}
             else:
                 return {"status": "pending"}
         except Exception as e:
@@ -418,6 +422,10 @@ class EchoSoulAPI:
             story_router.router,
             dependencies=[Depends(get_current_user)]
         )
+        app.include_router(
+            affective_memory_router.router,
+            dependencies=[Depends(get_current_user)])
+
 
         # ---------- 页面路由（无需认证） ----------
         app.add_api_route("/login", self.login_page, methods=["GET"])

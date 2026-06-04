@@ -353,14 +353,27 @@
         const data = await res.json();
         const taskId = data.task_id;
 
+        // 轮询结果
         let replyData = null;
-        for (let i = 0; i < 30; i++) {
-          await new Promise(r => setTimeout(r, 500));
-          const pollRes = await api(`${API_BASE}/chat/result/${taskId}`);
-          const pollData = await pollRes.json();
-          if (pollData.reply) {
-            replyData = pollData;
-            break;
+        let errorMsg = null;
+        for (let i = 0; i < 60; i++) {
+          await new Promise(r => setTimeout(r, 200));
+          try {
+              const pollRes = await api(`${API_BASE}/chat/result/${taskId}`);
+              const pollData = await pollRes.json();
+
+              if (pollData.reply) {
+                  replyData = pollData;
+                  break;
+              }
+              if (pollData.error) {
+                  errorMsg = pollData.error;
+                  break;
+              }
+              // 如果是 { status: "pending" }，继续轮询
+          } catch (err) {
+              console.error('轮询请求异常', err);
+              // 网络异常时继续重试
           }
         }
 
