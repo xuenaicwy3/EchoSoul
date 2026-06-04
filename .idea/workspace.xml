@@ -4,22 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="386caada-63df-470c-a0c1-925864ae15ee" name="更改" comment="高并发场景处理总结">
-      <change afterPath="$PROJECT_DIR$/app/game_service.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/routers/game_router.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/static/game.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/static/game.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/static/game.js" afterDir="false" />
+    <list default="true" id="386caada-63df-470c-a0c1-925864ae15ee" name="更改" comment="增加游戏化系统功能（养成系统+每日任务+成就系统+角色皮肤/主题）">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/database.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/chat_history.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/chat_history.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/models/db_models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/db_models.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/static/chat.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/static/chat.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/static/script.js" beforeDir="false" afterPath="$PROJECT_DIR$/app/static/script.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/static/style.css" beforeDir="false" afterPath="$PROJECT_DIR$/app/static/style.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/worker.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/worker.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -301,7 +290,7 @@
       <workItem from="1780455843088" duration="6792000" />
       <workItem from="1780462918441" duration="3989000" />
       <workItem from="1780467054856" duration="24924000" />
-      <workItem from="1780542399019" duration="4777000" />
+      <workItem from="1780542399019" duration="6863000" />
     </task>
     <task id="LOCAL-00001" summary="项目初始化">
       <option name="closed" value="true" />
@@ -447,7 +436,15 @@
       <option name="project" value="LOCAL" />
       <updated>1780493185033</updated>
     </task>
-    <option name="localTasksCounter" value="19" />
+    <task id="LOCAL-00019" summary="增加游戏化系统功能（养成系统+每日任务+成就系统+角色皮肤/主题）">
+      <option name="closed" value="true" />
+      <created>1780547419538</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1780547419538</updated>
+    </task>
+    <option name="localTasksCounter" value="20" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -482,7 +479,8 @@
     <MESSAGE value="高并发场景调试-解决记忆存储丢失问题" />
     <MESSAGE value="mock高并发场景测试" />
     <MESSAGE value="高并发场景处理总结" />
-    <option name="LAST_COMMIT_MESSAGE" value="高并发场景处理总结" />
+    <MESSAGE value="增加游戏化系统功能（养成系统+每日任务+成就系统+角色皮肤/主题）" />
+    <option name="LAST_COMMIT_MESSAGE" value="增加游戏化系统功能（养成系统+每日任务+成就系统+角色皮肤/主题）" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

@@ -301,9 +301,10 @@ class EchoSoulAPI:
         msgs = await self.scheduler.get_pending(current_user)
         return {"messages": msgs}
 
-    async def get_chat_history(self, role_type: str, current_user: str = Depends(get_current_user)):
+    async def get_chat_history(self, role_type: str, before: str = None, current_user: str = Depends(get_current_user)):
         """查询指定角色下的聊天历史"""
-        history = await self.chat_history.get_history(current_user, role_type)
+        limit = 50
+        history = await self.chat_history.get_history(current_user, role_type, limit=limit, before=before)
         return {"history": history}
 
     async def delete_chat_history(self, role_type: str, current_user: str = Depends(get_current_user)):

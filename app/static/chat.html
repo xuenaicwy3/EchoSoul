@@ -57,7 +57,6 @@
     const USER_ID = localStorage.getItem('user_id');
     const TOKEN = localStorage.getItem('token');
 
-    // 为每个用户创建独立的存储键，实现前端数据隔离
     const STORAGE_KEY = 'echo_sessions_' + USER_ID;
     const ACTIVE_ROLE_KEY = 'echo_active_role_' + USER_ID;
 
@@ -84,19 +83,15 @@
       { type: "清冷仙气型", name: "清歌", emoji: "🌙", desc: "清冷仙女" }
     ];
 
-    // ===================== 会话管理（持久化到 localStorage，按用户隔离） =====================
+    // ===================== 会话管理 =====================
     let sessions = [];
     let activeSessionRole = null;
 
     function loadSessions() {
       try {
         const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          sessions = JSON.parse(saved);
-        }
-      } catch (e) {
-        sessions = [];
-      }
+        if (saved) sessions = JSON.parse(saved);
+      } catch (e) { sessions = []; }
     }
 
     function saveSessions() {
@@ -117,6 +112,11 @@
     const customOptions = document.getElementById('customOptions');
     const addRoleBtn = document.getElementById('addRoleBtn');
     let selectedRoleType = null;
+
+    // ---------- 分页加载相关变量 ----------
+    let oldestTimestamp = null;       // 已加载的最早消息时间戳
+    let isLoadingMore = false;       // 是否正在加载更多
+    let allLoaded = false;           // 是否已加载全部历史
 
     // 自定义下拉框
     function buildCustomOptions() {
@@ -194,7 +194,13 @@
       activeSessionRole = roleType;
       localStorage.setItem(ACTIVE_ROLE_KEY, roleType);
       const session = sessions.find(s => s.roleType === roleType);
-      if (session) { chatHeaderName.textContent = `与 ${session.name} 的对话`; }
+      if (session) chatHeaderName.textContent = `与 ${session.name} 的对话`;
+
+      // 重置分页状态
+      oldestTimestamp = null;
+      allLoaded = false;
+      isLoadingMore = false;
+
       await loadHistory(roleType);
       renderSessionList();
     }
@@ -216,65 +222,154 @@
       renderSessionList();
     }
 
+    // ---------- 首次加载历史（最近50条） ----------
     async function loadHistory(roleType) {
       try {
         const res = await api(`${API_BASE}/chat_history/${encodeURIComponent(roleType)}`);
-        if (res.ok) {
-          const data = await res.json();
-          chatArea.innerHTML = '';
-          data.history.forEach(msg => {
-            addMessage(msg.sender, msg.message, formatTime(msg.timestamp));
-          });
-          chatArea.scrollTop = chatArea.scrollHeight;
+        if (!res.ok) {
+          console.warn('加载历史失败，HTTP状态:', res.status);
+          return;
         }
+
+        const data = await res.json();
+        const messages = Array.isArray(data) ? data : (data.history || []);
+        console.log(`[loadHistory] 收到 ${messages.length} 条消息`, messages);
+
+        chatArea.innerHTML = '';
+
+        if (messages.length > 0) {
+          // 记录最早消息的时间戳，用于后续加载更多
+          oldestTimestamp = messages[0].timestamp;
+        }
+
+        messages.forEach((msg, index) => {
+          try {
+            if (!msg || typeof msg !== 'object') return;
+            const sender = (msg.sender || 'ai').toLowerCase();
+            addMessage(sender, msg.message || '', formatTime(msg.timestamp));
+          } catch (e) {
+            console.error(`[loadHistory] 第 ${index} 条消息渲染失败`, msg, e);
+          }
+        });
+
+        // 如果返回数量少于50，说明没有更多了
+        allLoaded = messages.length < 50;
+        chatArea.scrollTop = chatArea.scrollHeight;
+        console.log('[loadHistory] 历史记录加载完成，最早时间:', oldestTimestamp);
       } catch (e) {
-        console.warn('加载历史失败', e);
+        console.error('加载历史记录异常:', e);
       }
     }
 
-    // 发送消息
+    // ---------- 滚动加载更多 ----------
+    async function loadMoreHistory(roleType) {
+      if (isLoadingMore || allLoaded) return;
+      if (!oldestTimestamp) return;
+
+      isLoadingMore = true;
+      try {
+        const url = `${API_BASE}/chat_history/${encodeURIComponent(roleType)}?before=${encodeURIComponent(oldestTimestamp)}`;
+        const res = await api(url);
+        if (!res.ok) {
+          console.warn('加载更多历史失败');
+          return;
+        }
+
+        const data = await res.json();
+        const messages = Array.isArray(data) ? data : (data.history || []);
+        console.log(`[loadMore] 收到 ${messages.length} 条更早消息`);
+
+        if (messages.length === 0) {
+          allLoaded = true;
+          return;
+        }
+
+        // 记录滚动条当前位置（插入前的高度）
+        const prevScrollHeight = chatArea.scrollHeight;
+
+        // 将更早的消息插入到最前面
+        messages.reverse().forEach(msg => {
+          const sender = (msg.sender || 'ai').toLowerCase();
+          addMessageToTop(sender, msg.message || '', formatTime(msg.timestamp));
+        });
+
+        // 更新最早时间戳
+        oldestTimestamp = messages[0].timestamp;
+
+        // 如果返回数量少于50，说明没有更多了
+        if (messages.length < 50) allLoaded = true;
+
+        // 保持滚动位置不变
+        chatArea.scrollTop = chatArea.scrollHeight - prevScrollHeight;
+        console.log('[loadMore] 加载更多完成，当前最早时间:', oldestTimestamp);
+      } catch (e) {
+        console.error('加载更多历史异常:', e);
+      } finally {
+        isLoadingMore = false;
+      }
+    }
+
+    // 将消息插入到聊天区域顶部（用于加载更早的消息）
+    function addMessageToTop(type, text, time) {
+      const session = sessions.find(s => s.roleType === activeSessionRole);
+      const avatarEmoji = type === 'ai' ? (session?.emoji || '🌸') : '😊';
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `message ${type}`;
+      msgDiv.innerHTML = `
+        <div class="avatar">${avatarEmoji}</div>
+        <div class="bubble"><div>${escapeHtml(text)}</div><div class="time">${time}</div></div>
+      `;
+      // 插入到第一个子元素之前
+      chatArea.insertBefore(msgDiv, chatArea.firstChild);
+    }
+
+    // 滚动监听
+    chatArea.addEventListener('scroll', () => {
+      if (chatArea.scrollTop <= 50) {  // 距离顶部50px时触发
+        if (activeSessionRole) {
+          loadMoreHistory(activeSessionRole);
+        }
+      }
+    });
+
+    // ===================== 发送消息（保持不变） =====================
     async function sendMessage(message, isSystem = false) {
-    if (!activeSessionRole) { alert('请先选择一个会话'); return; }
-    if (!isSystem) addMessage('user', message, formatTime());
+      if (!activeSessionRole) { alert('请先选择一个会话'); return; }
+      if (!isSystem) addMessage('user', message, formatTime());
 
-    // 强制显示提示
-    typingHint.style.setProperty('opacity', '1', 'important');
-    // typingHint.style.setProperty('color', '#d63384', 'important');
-    // typingHint.style.setProperty('background', 'rgba(255,240,245,0.9)', 'important');
+      typingHint.style.setProperty('opacity', '1', 'important');
 
-    try {
+      try {
         const res = await api(`${API_BASE}/chat`, {
-            method: 'POST',
-            body: JSON.stringify({ message, role_type: activeSessionRole })
+          method: 'POST',
+          body: JSON.stringify({ message, role_type: activeSessionRole })
         });
         const data = await res.json();
         const taskId = data.task_id;
 
         let replyData = null;
         for (let i = 0; i < 30; i++) {
-            await new Promise(r => setTimeout(r, 500));
-            const pollRes = await api(`${API_BASE}/chat/result/${taskId}`);
-            const pollData = await pollRes.json();
-            if (pollData.reply) {
-                replyData = pollData;
-                break;
-            }
+          await new Promise(r => setTimeout(r, 500));
+          const pollRes = await api(`${API_BASE}/chat/result/${taskId}`);
+          const pollData = await pollRes.json();
+          if (pollData.reply) {
+            replyData = pollData;
+            break;
+          }
         }
 
-        // 隐藏提示
         typingHint.style.setProperty('opacity', '0', 'important');
 
         if (replyData) {
-            addMessage('ai', replyData.reply, formatTime());
+          addMessage('ai', replyData.reply, formatTime());
         } else {
-            addMessage('ai', '😢 AI 回复超时，请稍后再试~', formatTime());
+          addMessage('ai', '😢 AI 回复超时，请稍后再试~', formatTime());
         }
-    } catch (err) {
+      } catch (err) {
         typingHint.style.setProperty('opacity', '0', 'important');
         addMessage('ai', '😢 网络出小差了，请稍后再试~', formatTime());
+      }
     }
-}
-
 
     function sendUserMessage() {
       const text = userInput.value.trim();
@@ -315,7 +410,7 @@
     sendBtn.addEventListener('click', sendUserMessage);
     userInput.addEventListener('keypress', e => { if (e.key === 'Enter') sendUserMessage(); });
 
-    // ===================== 页面初始化：恢复会话状态（按用户隔离） =====================
+    // ===================== 页面初始化 =====================
     const urlParams = new URLSearchParams(window.location.search);
     const initialRole = urlParams.get('role');
     const lastActiveRole = localStorage.getItem(ACTIVE_ROLE_KEY);
