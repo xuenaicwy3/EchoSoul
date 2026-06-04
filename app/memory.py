@@ -9,6 +9,7 @@ from app.config import Settings
 from app.prompts import PromptFactory
 from langchain.chat_models import init_chat_model
 from langchain_community.embeddings import DashScopeEmbeddings
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +81,7 @@ class MemoryService:
             dim = self._get_dim()
             fake_summary = f"[测试记忆] 用户说: {user_msg[:30]}... | AI回复: {ai_reply[:30]}..."
             fake_embedding = [0.0] * dim
-            now = datetime.now().isoformat()
+            now = datetime.now(timezone.utc).isoformat()
             try:
                 self.collection.add(
                     ids=[str(uuid.uuid4())],

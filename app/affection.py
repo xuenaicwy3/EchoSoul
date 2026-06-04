@@ -6,6 +6,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from app.database import get_async_session
 from app.models.db_models import Affection as AffectionModel
 from sqlalchemy import update, func   # 顶部添加导入
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +44,7 @@ class AffectionService:
                         trust=func.least(100.0, func.greatest(0.0, AffectionModel.trust + delta.get("trust", 0.0))),
                         fun=func.least(100.0, func.greatest(0.0, AffectionModel.fun + delta.get("fun", 0.0))),
                         growth=func.least(100.0, func.greatest(0.0, AffectionModel.growth + delta.get("growth", 0.0))),
-                        last_interaction=datetime.utcnow()
+                        last_interaction=datetime.now(timezone.utc)
                     )
                 )
                 result = await session.execute(stmt)

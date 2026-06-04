@@ -4,11 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="386caada-63df-470c-a0c1-925864ae15ee" name="更改" comment="增加游戏化系统功能（养成系统+每日任务+成就系统+角色皮肤/主题）">
+    <list default="true" id="386caada-63df-470c-a0c1-925864ae15ee" name="更改" comment="修复历史聊天记录加载不全问题，前端采用分页加载策略">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/affection.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/affection.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/chat_history.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/chat_history.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/static/chat.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/static/chat.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/memory.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/memory.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/db_models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/db_models.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -290,7 +291,7 @@
       <workItem from="1780455843088" duration="6792000" />
       <workItem from="1780462918441" duration="3989000" />
       <workItem from="1780467054856" duration="24924000" />
-      <workItem from="1780542399019" duration="6863000" />
+      <workItem from="1780542399019" duration="9014000" />
     </task>
     <task id="LOCAL-00001" summary="项目初始化">
       <option name="closed" value="true" />
@@ -444,7 +445,15 @@
       <option name="project" value="LOCAL" />
       <updated>1780547419538</updated>
     </task>
-    <option name="localTasksCounter" value="20" />
+    <task id="LOCAL-00020" summary="修复历史聊天记录加载不全问题，前端采用分页加载策略">
+      <option name="closed" value="true" />
+      <created>1780549598746</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1780549598746</updated>
+    </task>
+    <option name="localTasksCounter" value="21" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -480,7 +489,8 @@
     <MESSAGE value="mock高并发场景测试" />
     <MESSAGE value="高并发场景处理总结" />
     <MESSAGE value="增加游戏化系统功能（养成系统+每日任务+成就系统+角色皮肤/主题）" />
-    <option name="LAST_COMMIT_MESSAGE" value="增加游戏化系统功能（养成系统+每日任务+成就系统+角色皮肤/主题）" />
+    <MESSAGE value="修复历史聊天记录加载不全问题，前端采用分页加载策略" />
+    <option name="LAST_COMMIT_MESSAGE" value="修复历史聊天记录加载不全问题，前端采用分页加载策略" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

@@ -262,9 +262,16 @@
   }
 
   function formatTime(timestamp) {
-    if (timestamp) { const date = new Date(timestamp); return `${date.getHours().toString().padStart(2,'0')}:${date.getMinutes().toString().padStart(2,'0')}`; }
-    const now = new Date(); return `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+    if (timestamp) {
+        // 如果后端返回的是 "YYYY-MM-DD HH:MM:SS" 格式，取后5位时间
+        const parts = timestamp.split(' ');
+        if (parts.length === 2) return parts[1].substring(0, 5);
+        return timestamp; // fallback
+    }
+    const now = new Date();
+    return `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
   }
+
   function escapeHtml(text) {
     const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
     return text.replace(/[&<>"']/g, m => map[m]);

@@ -1,5 +1,10 @@
-from sqlalchemy import Column, Integer, String, Float, Text, DateTime, func, PrimaryKeyConstraint, Boolean, Date
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
+from sqlalchemy import Column, Integer, String, Float, Text, DateTime, func, PrimaryKeyConstraint, Boolean, Date, text
 from app.database import Base
+
+# 北京时间时区对象
+BEIJING_TZ = ZoneInfo("Asia/Shanghai")
 
 class ChatHistory(Base):
     __tablename__ = "chat_history"
@@ -8,18 +13,28 @@ class ChatHistory(Base):
     role_type = Column(String(64), nullable=False, index=True)
     sender = Column(String(10), nullable=False)
     message = Column(Text, nullable=False)
-    timestamp = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    timestamp = Column(DateTime(timezone=True), server_default=text("(now() AT TIME ZONE 'utc')"), index=True)
 
     __table_args__ = (
         PrimaryKeyConstraint("id", "role_type", name="pk_chat_history"),
     )
 
     def to_dict(self):
+        ts = self.timestamp
+        timestamp_str = None
+        if ts:
+            # 如果数据库取出的 datetime 没有时区信息（naive），设定为 UTC
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=timezone.utc)
+            # 转换为北京时间
+            ts_beijing = ts.astimezone(BEIJING_TZ)
+            timestamp_str = ts_beijing.strftime('%Y-%m-%d %H:%M:%S')
         return {
             "sender": self.sender,
             "message": self.message,
-            "timestamp": self.timestamp.isoformat() if self.timestamp else None
+            "timestamp": timestamp_str
         }
+
 
 class Affection(Base):
     __tablename__ = "affection"
@@ -29,17 +44,17 @@ class Affection(Base):
     trust = Column(Float, default=10.0)
     fun = Column(Float, default=10.0)
     growth = Column(Float, default=10.0)
-    last_interaction = Column(DateTime(timezone=True), server_default=func.now())
+    last_interaction = Column(DateTime(timezone=True), server_default=text("(now() AT TIME ZONE 'utc')"))
 
 
 # 每日任务定义表
 class DailyTaskTemplate(Base):
     __tablename__ = "daily_task_templates"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(64), nullable=False)          # 任务名称，如“早安问候”
-    description = Column(String(255))                   # 任务描述
-    reward_intimacy = Column(Float, default=5.0)        # 完成奖励亲密度
-    key_trigger = Column(String(64))                    # 触发关键词（可选）
+    name = Column(String(64), nullable=False)
+    description = Column(String(255))
+    reward_intimacy = Column(Float, default=5.0)
+    key_trigger = Column(String(64))
 
 # 用户每日任务进度表
 class UserDailyTask(Base):
@@ -48,18 +63,18 @@ class UserDailyTask(Base):
     user_id = Column(String(64), nullable=False, index=True)
     role_type = Column(String(64), nullable=False)
     task_template_id = Column(Integer, nullable=False)
-    date = Column(Date, nullable=False)                 # 任务所属日期
+    date = Column(Date, nullable=False)
     completed = Column(Boolean, default=False)
-    completion_time = Column(DateTime, nullable=True)
+    completion_time = Column(DateTime(timezone=True), nullable=True)
 
 # 成就定义表
 class Achievement(Base):
     __tablename__ = "achievements"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(64), nullable=False)           # 成就名称
+    name = Column(String(64), nullable=False)
     description = Column(String(255))
-    category = Column(String(32))                       # 如 "chat_count", "chat_length", "consecutive_days"
-    threshold = Column(Integer)                         # 达成阈值
+    category = Column(String(32))
+    threshold = Column(Integer)
     reward_intimacy = Column(Float, default=10.0)
 
 # 用户成就进度表
@@ -68,9 +83,9 @@ class UserAchievement(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(String(64), nullable=False, index=True)
     achievement_id = Column(Integer, nullable=False)
-    progress = Column(Integer, default=0)               # 当前进度
+    progress = Column(Integer, default=0)
     completed = Column(Boolean, default=False)
-    completed_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime(timezone=True), nullable=True)
 
 # 皮肤/主题表
 class Skin(Base):
@@ -79,9 +94,9 @@ class Skin(Base):
     role_type = Column(String(64), nullable=False)
     name = Column(String(64), nullable=False)
     description = Column(String(255))
-    unlock_condition = Column(Text)                     # 解锁条件描述，如 "亲密度达到30"
-    unlock_type = Column(String(32))                    # 条件类型: "intimacy", "achievement", "task"
-    unlock_value = Column(Integer)                      # 条件阈值
+    unlock_condition = Column(Text)
+    unlock_type = Column(String(32))
+    unlock_value = Column(Integer)
 
 # 用户皮肤表
 class UserSkin(Base):
@@ -90,4 +105,4 @@ class UserSkin(Base):
     user_id = Column(String(64), nullable=False, index=True)
     role_type = Column(String(64), nullable=False)
     skin_id = Column(Integer, nullable=False)
-    equipped = Column(Boolean, default=False)           # 是否当前使用
+    equipped = Column(Boolean, default=False)

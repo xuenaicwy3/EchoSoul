@@ -1,12 +1,16 @@
 import logging
 from typing import List, Dict
-from datetime import datetime
+from zoneinfo import ZoneInfo
 from sqlalchemy import select, delete
 from app.database import get_async_session
 from app.models.db_models import ChatHistory as ChatHistoryModel
-
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
+
+# 北京时间时区对象
+BEIJING_TZ = ZoneInfo("Asia/Shanghai")
+
 
 class ChatHistoryManager:
     @classmethod
@@ -17,7 +21,7 @@ class ChatHistoryManager:
                 record = ChatHistoryModel(
                     user_id=user_id, role_type=role_type,
                     sender=sender, message=message,
-                    timestamp=datetime.utcnow()
+                    timestamp=datetime.now(timezone.utc)
                 )
                 session.add(record)
             logger.debug("历史消息已存储: sender=%s, role=%s", sender, role_type)
@@ -31,21 +35,17 @@ class ChatHistoryManager:
                 ChatHistoryModel.role_type == role_type
             )
             if before:
-                # 将ISO字符串转为datetime对象（假设数据库存储带时区）
-                from datetime import datetime
                 before_dt = datetime.fromisoformat(before)
                 query = query.where(ChatHistoryModel.timestamp < before_dt)
 
             query = query.order_by(ChatHistoryModel.timestamp.desc()).limit(limit)
             result = await session.execute(query)
             rows = result.scalars().all()
-
-            # 因为查询是倒序，需要反转成正序
             rows = list(reversed(rows))
+
             history = [row.to_dict() for row in rows]
             logger.info("加载聊天历史: user=%s, role=%s, 共 %d 条", user_id[:8], role_type, len(history))
             return history
-
 
     @classmethod
     async def delete_history(self, user_id: str, role_type: str):
