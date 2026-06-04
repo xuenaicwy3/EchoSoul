@@ -4,10 +4,17 @@
 import asyncio
 import json
 import logging
+
+from app.game_service import GameService
 from app.redis_client import get_redis_client
 from app.agent import EchoSoulAgent
+from app.config import Settings                # ← 新增导入
 
 logger = logging.getLogger(__name__)
+
+# 实例化游戏服务
+settings = Settings()
+game_service = GameService(settings)           # ← 新增实例化
 
 async def process_postprocess_stream(agent: EchoSoulAgent):
     r = get_redis_client()
@@ -52,6 +59,11 @@ async def process_postprocess_stream(agent: EchoSoulAgent):
                         emotion=task["emotion"],
                     )
                     await r.xack("postprocess_stream", group, msg_id)
+                    # 然后处理成就，即使失败也不影响消息消费
+                    try:
+                        await game_service.update_achievements(task["user_id"], task["role_type"], task["user_input"])
+                    except Exception as e:
+                        logger.error(f"成就更新失败: {e}")
         except Exception as e:
             logger.error(f"后处理 Worker 异常: {e}", exc_info=True)
             await asyncio.sleep(1)

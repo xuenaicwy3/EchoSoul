@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>心流 · 聊天</title>
   <link rel="stylesheet" href="/static/style.css">
+  <!-- 新增游戏化样式 -->
+  <link rel="stylesheet" href="/static/game.css">
 </head>
 <body>
   <div class="app-container">
@@ -30,6 +32,13 @@
       <div class="chat-header">
         <span class="active-role-name">选择一个会话开始聊天</span>
         <span class="typing-hint" id="typingHint">对方正在输入...</span>
+        <!-- ===== 在这里添加游戏中心按钮和皮肤显示 ===== -->
+        <div class="header-right">
+          <span id="skinIndicator" class="skin-indicator" style="display:none;">
+            🎨 <span id="skinName"></span>
+          </span>
+          <a href="/game" class="game-btn">🎮 游戏中心</a>
+        </div>
       </div>
       <div class="chat-area" id="chatArea"></div>
       <div class="input-area">
@@ -225,40 +234,47 @@
 
     // 发送消息
     async function sendMessage(message, isSystem = false) {
-        if (!activeSessionRole) { alert('请先选择一个会话'); return; }
-        if (!isSystem) addMessage('user', message, formatTime());
-        typingHint.style.display = 'block';
-        try {
-            // 1. 发送消息，获取 task_id
-            const res = await api(`${API_BASE}/chat`, {
-                method: 'POST',
-                body: JSON.stringify({ message, role_type: activeSessionRole })
-            });
-            const data = await res.json();
-            const taskId = data.task_id;
+    if (!activeSessionRole) { alert('请先选择一个会话'); return; }
+    if (!isSystem) addMessage('user', message, formatTime());
 
-            // 2. 轮询结果
-            let result = null;
-            for (let i = 0; i < 30; i++) {
-                await new Promise(r => setTimeout(r, 500));
-                const pollRes = await api(`${API_BASE}/chat/result/${taskId}`);
-                const pollData = await pollRes.json();
-                if (pollData.reply) {
-                    result = pollData;
-                    break;
-                }
+    // 强制显示提示
+    typingHint.style.setProperty('opacity', '1', 'important');
+    // typingHint.style.setProperty('color', '#d63384', 'important');
+    // typingHint.style.setProperty('background', 'rgba(255,240,245,0.9)', 'important');
+
+    try {
+        const res = await api(`${API_BASE}/chat`, {
+            method: 'POST',
+            body: JSON.stringify({ message, role_type: activeSessionRole })
+        });
+        const data = await res.json();
+        const taskId = data.task_id;
+
+        let replyData = null;
+        for (let i = 0; i < 30; i++) {
+            await new Promise(r => setTimeout(r, 500));
+            const pollRes = await api(`${API_BASE}/chat/result/${taskId}`);
+            const pollData = await pollRes.json();
+            if (pollData.reply) {
+                replyData = pollData;
+                break;
             }
-            typingHint.style.display = 'none';
-            if (result) {
-                addMessage('ai', result.reply, formatTime());
-            } else {
-                addMessage('ai', '😢 AI 回复超时，请稍后再试~', formatTime());
-            }
-        } catch (err) {
-            typingHint.style.display = 'none';
-            addMessage('ai', '😢 网络出小差了，请稍后再试~', formatTime());
         }
+
+        // 隐藏提示
+        typingHint.style.setProperty('opacity', '0', 'important');
+
+        if (replyData) {
+            addMessage('ai', replyData.reply, formatTime());
+        } else {
+            addMessage('ai', '😢 AI 回复超时，请稍后再试~', formatTime());
+        }
+    } catch (err) {
+        typingHint.style.setProperty('opacity', '0', 'important');
+        addMessage('ai', '😢 网络出小差了，请稍后再试~', formatTime());
     }
+}
+
 
     function sendUserMessage() {
       const text = userInput.value.trim();

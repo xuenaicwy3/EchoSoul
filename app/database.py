@@ -14,6 +14,20 @@ async_session = None
 class Base(DeclarativeBase):
     pass
 
+# ========== 导入所有模型，确保 create_all 能创建对应表 ==========
+from app.models.db_models import (
+    ChatHistory,
+    Affection,
+    DailyTaskTemplate,
+    UserDailyTask,
+    Achievement,
+    UserAchievement,
+    Skin,
+    UserSkin,
+)
+# ===================================================================
+
+
 PARTITION_TABLES = ["chat_history"]
 
 async def init_db(settings: Settings):

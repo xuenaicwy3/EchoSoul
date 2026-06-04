@@ -10,7 +10,6 @@ from pathlib import Path
 
 import psycopg
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-
 from app.checkpoint_setup import init_checkpoint_tables
 
 from fastapi import FastAPI, Request, HTTPException
@@ -47,6 +46,8 @@ from celery.result import AsyncResult
 from app.celery_app import celery_app
 from app.tasks import process_chat
 from app.worker import process_postprocess_stream
+from app.routers import game_router  # 新增游戏化路由
+from app.game_service import GameService
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +85,11 @@ class EchoSoulAPI:
         """应用生命周期：启动时初始化数据库、Redis，启动后处理 Worker"""
         await init_db(self.settings)
         await init_redis(self.settings)
+
+        # ----- 初始化游戏化种子数据 -----
+        game_svc = GameService(self.settings)
+        await game_svc.init_game_data()
+        # -------------------------------
 
         # 启动后处理 Worker（唯一操作记忆的协程，避免多进程竞争）
         self.postprocess_task = asyncio.create_task(process_postprocess_stream(self.agent))
@@ -212,6 +218,11 @@ class EchoSoulAPI:
         except Exception as e:
             logger.error(f"获取任务结果失败: {e}")
             return {"error": "内部错误"}
+
+    async def game_page(self):
+        """游戏中心页面"""
+        return FileResponse(str(self.static_dir / "game.html"))
+
 
     # ---------- 新增异步接口 ----------
     async def chat_async(self, req: ChatRequest, current_user: str = Depends(get_current_user)):
@@ -349,7 +360,7 @@ class EchoSoulAPI:
             logger.critical("未捕获异常: %s", exc, exc_info=True)
             return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
-        # ---------- 注册路由 ----------
+        # ---------- API 路由（需要认证） ----------
         # 需要认证的路由统一添加 dependencies
         auth_deps = [Depends(get_current_user)]
         app.add_api_route(
@@ -394,12 +405,16 @@ class EchoSoulAPI:
             dependencies=auth_deps
         )
 
+
+        app.include_router(game_router.router, dependencies=[Depends(get_current_user)])
+
         # ---------- 页面路由（无需认证） ----------
         app.add_api_route("/login", self.login_page, methods=["GET"])
         app.add_api_route("/register", self.register_page, methods=["GET"])
         app.add_api_route("/home", self.home_page, methods=["GET"])
         app.add_api_route("/chat", self.chat_page, methods=["GET"])  # 注意：GET /chat 返回聊天页面
         app.add_api_route("/", self.login_page, methods=["GET"])  # 根路径默认到登录页
+        app.add_api_route("/game", self.game_page, methods=["GET"])  # 新增游戏中心页面
         # 将 /static 路径映射到实际的静态文件目录
         app.mount("/static", StaticFiles(directory=str(self.static_dir)), name="static")
 

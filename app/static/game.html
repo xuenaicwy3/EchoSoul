@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>心流 · 游戏中心</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/game.css">
+  <style>
+    /* 游戏中心专属布局 */
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #ffd6e0 0%, #fff0f5 50%, #fce4ec 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    }
+    .game-container {
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(12px);
+      border-radius: 24px;
+      box-shadow: 0 20px 40px rgba(233, 30, 99, 0.15);
+      padding: 2.5rem;
+      width: 90%;
+      max-width: 680px;
+      max-height: 90vh;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+      box-sizing: border-box;
+    }
+    .game-container h3 {
+      color: #d63384;
+      font-size: 1.3rem;
+      margin: 0 0 0.8rem 0;
+      border-bottom: 2px dashed #f8bbd0;
+      padding-bottom: 0.4rem;
+    }
+    .affection-status p {
+      margin: 0.3rem 0;
+      font-size: 1rem;
+      color: #555;
+    }
+    .affection-status span {
+      font-weight: bold;
+      color: #e91e63;
+    }
+    .daily-tasks ul,
+    .achievements ul {
+      list-style: none;
+      padding: 0;
+    }
+    .daily-tasks li,
+    .achievements li {
+      background: #fff5f9;
+      border-radius: 12px;
+      padding: 0.7rem 1rem;
+      margin-bottom: 0.6rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    }
+    .daily-tasks button,
+    .skin-card button {
+      background: #e91e63;
+      color: white;
+      border: none;
+      padding: 0.3rem 1rem;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: background 0.2s;
+    }
+    .daily-tasks button:hover,
+    .skin-card button:hover {
+      background: #c2185b;
+    }
+    .skin-gallery {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.8rem;
+    }
+    .skin-card {
+      background: #fff5f9;
+      border-radius: 16px;
+      padding: 1rem;
+      flex: 1 1 140px;
+      text-align: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    }
+    .skin-card p {
+      margin: 0.3rem 0;
+      font-size: 0.9rem;
+    }
+    progress {
+      width: 100px;
+      height: 10px;
+      border-radius: 10px;
+      accent-color: #e91e63;
+    }
+    .back-link {
+      text-align: center;
+      margin-top: 0.5rem;
+    }
+    .back-link a {
+      color: #d81b60;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .back-link a:hover {
+      text-decoration: underline;
+    }
+    @media (max-width: 500px) {
+      .game-container {
+        padding: 1.5rem;
+        gap: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <div class="back-link">
+      <a href="/chat">← 返回聊天</a>
+    </div>
+
+    <div class="affection-status">
+      <h3>💖 养成状态</h3>
+      <p>亲密度：<span id="intimacy-value">0</span></p>
+      <p id="unlock-memory" style="display:none">🧠 记忆扩容已解锁</p>
+      <p id="unlock-action" style="display:none">🎭 专属动作已解锁</p>
+      <p id="unlock-topic" style="display:none">💬 新话题已解锁</p>
+    </div>
+
+    <div class="daily-tasks">
+      <h3>📋 每日任务</h3>
+      <ul id="task-list"></ul>
+    </div>
+
+    <div class="achievements">
+      <h3>🏆 成就</h3>
+      <ul id="achievement-list"></ul>
+    </div>
+
+    <div class="skins">
+      <h3>🎨 角色皮肤</h3>
+      <div class="skin-gallery" id="skin-gallery"></div>
+    </div>
+  </div>
+  <script src="/static/game.js"></script>
+</body>
+</html>

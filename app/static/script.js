@@ -206,7 +206,7 @@
   async function sendMessage(message, isSystem = false) {
       if (!activeSessionRole) { alert('请先选择一个会话'); return; }
       if (!isSystem) addMessage('user', message, formatTime());
-      typingHint.style.display = 'block';
+      typingHint.style.opacity   = '1';
       try {
           // 1. 发送消息，获取 task_id
           const res = await api(`${API_BASE}/chat`, {
@@ -228,7 +228,7 @@
               }
           }
 
-          typingHint.style.display = 'none';
+          typingHint.style.opacity  = '0';
 
           if (replyData) {
               addMessage('ai', replyData.reply, formatTime());
@@ -236,7 +236,7 @@
               addMessage('ai', '😢 AI 回复超时，请稍后再试~', formatTime());
           }
       } catch (err) {
-          typingHint.style.display = 'none';
+          typingHint.style.opacity  = '0';
           addMessage('ai', '😢 网络出小差了，请稍后再试~', formatTime());
       }
   }

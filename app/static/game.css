@@ -1,0 +1,30 @@
+/* ===================== 游戏中心按钮 ===================== */
+.game-center-btn {
+  margin-left: auto;
+  background: #a855f7;
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 14px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+/*.game-center-btn:hover {*/
+/*  background: #9333ea;*/
+/*}*/
+
+/* ===================== 皮肤指示器 ===================== */
+.skin-indicator {
+  margin-left: 10px;
+  font-size: 13px;
+  color: #666;
+  background: #f5f3ff;
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
+/* ===================== 皮肤主题 ===================== */
+body.theme-1 { --primary: #ff6b9d; --bg: #fff0f5; }
+body.theme-2 { --primary: #4ecdc4; --bg: #f0fdfa; }
+body.theme-3 { --primary: #a78bfa; --bg: #f5f3ff; }
