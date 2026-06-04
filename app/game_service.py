@@ -7,6 +7,7 @@ from app.models.db_models import (
     Skin, UserSkin, Affection as AffectionModel
 )
 from app.config import Settings
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -185,6 +186,7 @@ class GameService:
                 })
             return ret
 
+
     async def update_achievements(self, user_id: str, role_type: str, message: str):
         """在每次对话后调用，更新成就进度（聊天字数、连续天数等）"""
         session = get_async_session()
@@ -195,20 +197,34 @@ class GameService:
                 Achievement.category == "chat_length"
             ))
             for a in ach.scalars().all():
-                user_ach = await s.get(UserAchievement, (user_id, a.id)) or None
+                # 查询用户成就进度（用 select 代替 get，因为主键是自增 id）
+                result = await s.execute(
+                    select(UserAchievement).where(
+                        UserAchievement.user_id == user_id,
+                        UserAchievement.achievement_id == a.id
+                    )
+                )
+                user_ach = result.scalar_one_or_none()
+
                 if not user_ach:
-                    user_ach = UserAchievement(user_id=user_id, achievement_id=a.id, progress=0)
+                    user_ach = UserAchievement(
+                        user_id=user_id,
+                        achievement_id=a.id,
+                        progress=0
+                    )
                     s.add(user_ach)
+
                 if not user_ach.completed:
                     user_ach.progress += word_count
                     if user_ach.progress >= a.threshold:
                         user_ach.progress = a.threshold
                         user_ach.completed = True
-                        user_ach.completed_at = datetime.utcnow()
+                        user_ach.completed_at = datetime.now(timezone.utc)  # 使用带时区的时间
                         # 发放奖励
                         await self._grant_intimacy(user_id, role_type, a.reward_intimacy)
 
             await s.commit()
+
 
     async def _grant_intimacy(self, user_id: str, role_type: str, amount: float):
         """发放亲密度"""

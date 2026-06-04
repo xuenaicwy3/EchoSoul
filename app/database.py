@@ -7,15 +7,9 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 from sqlalchemy.orm import DeclarativeBase
 from app.config import Settings
 
-# 全局引擎和会话工厂
-engine: AsyncEngine | None = None
-async_session = None
-
-class Base(DeclarativeBase):
-    pass
-
-# ========== 导入所有模型，确保 create_all 能创建对应表 ==========
+# 从统一模型文件导入 Base 和所有模型，确保 create_all 能创建所有表
 from app.models.db_models import (
+    Base,
     ChatHistory,
     Affection,
     DailyTaskTemplate,
@@ -24,11 +18,16 @@ from app.models.db_models import (
     UserAchievement,
     Skin,
     UserSkin,
+    Story,
+    StoryNode,
 )
-# ===================================================================
 
 
+# 全局引擎和会话工厂
+engine: AsyncEngine | None = None
+async_session = None
 PARTITION_TABLES = ["chat_history"]
+
 
 async def init_db(settings: Settings):
     """

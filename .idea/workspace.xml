@@ -4,12 +4,23 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="386caada-63df-470c-a0c1-925864ae15ee" name="更改" comment="修复历史聊天记录加载不全问题，前端采用分页加载策略">
+    <list default="true" id="386caada-63df-470c-a0c1-925864ae15ee" name="更改" comment="项目初始化">
+      <change afterPath="$PROJECT_DIR$/app/routers/story_router.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/static/story.css" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/static/story.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/static/story.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/story_service.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/affection.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/affection.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/chat_history.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/chat_history.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/database.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/emotions.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/emotions.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/game_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/game_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/memory.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/memory.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/models/db_models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/db_models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/static/chat.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/static/chat.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/static/game.css" beforeDir="false" afterPath="$PROJECT_DIR$/app/static/game.css" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -20,37 +31,22 @@
     <option name="RECENT_TEMPLATES">
       <list>
         <option value="HTML File" />
+        <option value="CSS File" />
         <option value="JavaScript File" />
         <option value="Python Script" />
-        <option value="CSS File" />
       </list>
-    </option>
-  </component>
-  <component name="FlaskConsoleOptions" custom-start-script="import sys; print('Python %s on %s' % (sys.version, sys.platform)); sys.path.extend([WORKING_DIR_AND_PYTHON_PATHS])&#10;from flask.cli import ScriptInfo, NoAppException&#10;for module in [&quot;main.py&quot;, &quot;wsgi.py&quot;, &quot;app.py&quot;]:&#10;    try: locals().update(ScriptInfo(app_import_path=module, create_app=None).load_app().make_shell_context()); print(&quot;\nFlask App: %s&quot; % app.import_name); break&#10;    except NoAppException: pass">
-    <envs>
-      <env key="FLASK_APP" value="app" />
-    </envs>
-    <option name="myCustomStartScript" value="import sys; print('Python %s on %s' % (sys.version, sys.platform)); sys.path.extend([WORKING_DIR_AND_PYTHON_PATHS])&#10;from flask.cli import ScriptInfo, NoAppException&#10;for module in [&quot;main.py&quot;, &quot;wsgi.py&quot;, &quot;app.py&quot;]:&#10;    try: locals().update(ScriptInfo(app_import_path=module, create_app=None).load_app().make_shell_context()); print(&quot;\nFlask App: %s&quot; % app.import_name); break&#10;    except NoAppException: pass" />
-    <option name="myEnvs">
-      <map>
-        <entry key="FLASK_APP" value="app" />
-      </map>
     </option>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="master" />
+        <entry key="$PROJECT_DIR$" value="develop" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="HighlightingSettingsPerFile">
-    <setting file="file://$PROJECT_DIR$/app/main.py" root0="SKIP_INSPECTION" />
-    <setting file="file://$PROJECT_DIR$/../../envs/EchoSoul/Lib/site-packages/langchain_openai/chat_models/base.py" root0="SKIP_INSPECTION" />
-  </component>
   <component name="ProblemsViewState">
-    <option name="selectedTabId" value="CurrentFile" />
+    <option name="selectedTabId" value="DEPENDENCY_CHECKER_PROBLEMS_TAB" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 2
@@ -63,41 +59,24 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;Python.agent.executor&quot;: &quot;Run&quot;,
-    &quot;Python.auth_router.executor&quot;: &quot;Run&quot;,
-    &quot;Python.locustfile.executor&quot;: &quot;Run&quot;,
-    &quot;Python.main.executor&quot;: &quot;Debug&quot;,
-    &quot;Python.run.executor&quot;: &quot;Run&quot;,
-    &quot;Python.test_auth.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;develop&quot;,
-    &quot;list.type.of.created.stylesheet&quot;: &quot;CSS&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
-  },
-  &quot;keyToStringList&quot;: {
-    &quot;DatabaseDriversLRU&quot;: [
-      &quot;postgresql&quot;
-    ]
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "DefaultHtmlFileTemplate": "HTML File",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "master",
+    "list.type.of.created.stylesheet": "CSS",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
-  <component name="RecentsManager">
-    <key name="MoveFile.RECENT_KEYS">
-      <recent name="D:\Develop\PyCharm\Projects\EchoSoul\app" />
-    </key>
-  </component>
-  <component name="RunManager" selected="Python.locustfile">
+}]]></component>
+  <component name="RunManager" selected="Python.main">
     <configuration name="agent" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="EchoSoul" />
       <option name="ENV_FILES" value="" />
@@ -182,7 +161,7 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="D:\Develop\PyCharm\Projects\EchoSoul\app\main.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/main.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -239,10 +218,10 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.locustfile" />
-        <item itemvalue="Python.auth_router" />
         <item itemvalue="Python.test_auth" />
         <item itemvalue="Python.run" />
+        <item itemvalue="Python.locustfile" />
+        <item itemvalue="Python.auth_router" />
         <item itemvalue="Python.agent" />
       </list>
     </recent_temporary>
@@ -263,35 +242,7 @@
       <option name="presentableId" value="Default" />
       <updated>1780031944293</updated>
       <workItem from="1780031945426" duration="536000" />
-      <workItem from="1780032487130" duration="2465000" />
-      <workItem from="1780045194940" duration="281000" />
-      <workItem from="1780045519278" duration="166000" />
-      <workItem from="1780045722963" duration="356000" />
-      <workItem from="1780051943880" duration="7486000" />
-      <workItem from="1780066403611" duration="1641000" />
-      <workItem from="1780112779819" duration="18915000" />
-      <workItem from="1780132352685" duration="369000" />
-      <workItem from="1780132772327" duration="26000" />
-      <workItem from="1780132877377" duration="231000" />
-      <workItem from="1780136295156" duration="20217000" />
-      <workItem from="1780199936967" duration="15405000" />
-      <workItem from="1780216104398" duration="8641000" />
-      <workItem from="1780227638986" duration="2740000" />
-      <workItem from="1780233390991" duration="65000" />
-      <workItem from="1780234313612" duration="5197000" />
-      <workItem from="1780290353364" duration="7409000" />
-      <workItem from="1780302465446" duration="207000" />
-      <workItem from="1780302755282" duration="4907000" />
-      <workItem from="1780310705248" duration="269000" />
-      <workItem from="1780310991464" duration="19399000" />
-      <workItem from="1780371335033" duration="2602000" />
-      <workItem from="1780377734427" duration="10160000" />
-      <workItem from="1780388113491" duration="394000" />
-      <workItem from="1780388524749" duration="21433000" />
-      <workItem from="1780455843088" duration="6792000" />
-      <workItem from="1780462918441" duration="3989000" />
-      <workItem from="1780467054856" duration="24924000" />
-      <workItem from="1780542399019" duration="9014000" />
+      <workItem from="1780032487130" duration="1187000" />
     </task>
     <task id="LOCAL-00001" summary="项目初始化">
       <option name="closed" value="true" />
@@ -301,159 +252,7 @@
       <option name="project" value="LOCAL" />
       <updated>1780032404791</updated>
     </task>
-    <task id="LOCAL-00002" summary="项目初始化">
-      <option name="closed" value="true" />
-      <created>1780034215661</created>
-      <option name="number" value="00002" />
-      <option name="presentableId" value="LOCAL-00002" />
-      <option name="project" value="LOCAL" />
-      <updated>1780034215661</updated>
-    </task>
-    <task id="LOCAL-00003" summary="项目初始化">
-      <option name="closed" value="true" />
-      <created>1780034353740</created>
-      <option name="number" value="00003" />
-      <option name="presentableId" value="LOCAL-00003" />
-      <option name="project" value="LOCAL" />
-      <updated>1780034353740</updated>
-    </task>
-    <task id="LOCAL-00004" summary="AI虚拟陪伴项目-前后端调试成功">
-      <option name="closed" value="true" />
-      <created>1780213719085</created>
-      <option name="number" value="00004" />
-      <option name="presentableId" value="LOCAL-00004" />
-      <option name="project" value="LOCAL" />
-      <updated>1780213719085</updated>
-    </task>
-    <task id="LOCAL-00005" summary="修改requirements.txt文件">
-      <option name="closed" value="true" />
-      <created>1780213886756</created>
-      <option name="number" value="00005" />
-      <option name="presentableId" value="LOCAL-00005" />
-      <option name="project" value="LOCAL" />
-      <updated>1780213886756</updated>
-    </task>
-    <task id="LOCAL-00006" summary="解决记忆存储问题">
-      <option name="closed" value="true" />
-      <created>1780215154573</created>
-      <option name="number" value="00006" />
-      <option name="presentableId" value="LOCAL-00006" />
-      <option name="project" value="LOCAL" />
-      <updated>1780215154573</updated>
-    </task>
-    <task id="LOCAL-00007" summary="按虚拟角色类型隔离记忆存储（在存储和检索时额外添加 role_type 字段作为过滤条件）">
-      <option name="closed" value="true" />
-      <created>1780218197809</created>
-      <option name="number" value="00007" />
-      <option name="presentableId" value="LOCAL-00007" />
-      <option name="project" value="LOCAL" />
-      <updated>1780218197809</updated>
-    </task>
-    <task id="LOCAL-00008" summary="按虚拟角色类型隔离聊天记录（将role_type 纳入 thread_id）">
-      <option name="closed" value="true" />
-      <created>1780225723708</created>
-      <option name="number" value="00008" />
-      <option name="presentableId" value="LOCAL-00008" />
-      <option name="project" value="LOCAL" />
-      <updated>1780225723708</updated>
-    </task>
-    <task id="LOCAL-00009" summary="与所有虚拟角色的历史聊天记录进行存储和查询">
-      <option name="closed" value="true" />
-      <created>1780237537913</created>
-      <option name="number" value="00009" />
-      <option name="presentableId" value="LOCAL-00009" />
-      <option name="project" value="LOCAL" />
-      <updated>1780237537913</updated>
-    </task>
-    <task id="LOCAL-00010" summary="使用PostgreSQL数据库存储所有虚拟角色的历史聊天记录">
-      <option name="closed" value="true" />
-      <created>1780320518378</created>
-      <option name="number" value="00010" />
-      <option name="presentableId" value="LOCAL-00010" />
-      <option name="project" value="LOCAL" />
-      <updated>1780320518378</updated>
-    </task>
-    <task id="LOCAL-00011" summary="Redis在scheduler.py中具体使用">
-      <option name="closed" value="true" />
-      <created>1780321566010</created>
-      <option name="number" value="00011" />
-      <option name="presentableId" value="LOCAL-00011" />
-      <option name="project" value="LOCAL" />
-      <updated>1780321566010</updated>
-    </task>
-    <task id="LOCAL-00012" summary="多用户使用-隔离每个用户与所有角色类型之间的聊天记录">
-      <option name="closed" value="true" />
-      <created>1780377911069</created>
-      <option name="number" value="00012" />
-      <option name="presentableId" value="LOCAL-00012" />
-      <option name="project" value="LOCAL" />
-      <updated>1780377911069</updated>
-    </task>
-    <task id="LOCAL-00013" summary="用户认证与数据隔离">
-      <option name="closed" value="true" />
-      <created>1780385728182</created>
-      <option name="number" value="00013" />
-      <option name="presentableId" value="LOCAL-00013" />
-      <option name="project" value="LOCAL" />
-      <updated>1780385728182</updated>
-    </task>
-    <task id="LOCAL-00014" summary="celery+redis+postgresql+worker处理高并发场景">
-      <option name="closed" value="true" />
-      <created>1780463135143</created>
-      <option name="number" value="00014" />
-      <option name="presentableId" value="LOCAL-00014" />
-      <option name="project" value="LOCAL" />
-      <updated>1780463135143</updated>
-    </task>
-    <task id="LOCAL-00015" summary="locust性能测试 高并发场景">
-      <option name="closed" value="true" />
-      <created>1780463341120</created>
-      <option name="number" value="00015" />
-      <option name="presentableId" value="LOCAL-00015" />
-      <option name="project" value="LOCAL" />
-      <updated>1780463341120</updated>
-    </task>
-    <task id="LOCAL-00016" summary="高并发场景调试-解决记忆存储丢失问题">
-      <option name="closed" value="true" />
-      <created>1780475212681</created>
-      <option name="number" value="00016" />
-      <option name="presentableId" value="LOCAL-00016" />
-      <option name="project" value="LOCAL" />
-      <updated>1780475212681</updated>
-    </task>
-    <task id="LOCAL-00017" summary="mock高并发场景测试">
-      <option name="closed" value="true" />
-      <created>1780476507707</created>
-      <option name="number" value="00017" />
-      <option name="presentableId" value="LOCAL-00017" />
-      <option name="project" value="LOCAL" />
-      <updated>1780476507707</updated>
-    </task>
-    <task id="LOCAL-00018" summary="高并发场景处理总结">
-      <option name="closed" value="true" />
-      <created>1780493185033</created>
-      <option name="number" value="00018" />
-      <option name="presentableId" value="LOCAL-00018" />
-      <option name="project" value="LOCAL" />
-      <updated>1780493185033</updated>
-    </task>
-    <task id="LOCAL-00019" summary="增加游戏化系统功能（养成系统+每日任务+成就系统+角色皮肤/主题）">
-      <option name="closed" value="true" />
-      <created>1780547419538</created>
-      <option name="number" value="00019" />
-      <option name="presentableId" value="LOCAL-00019" />
-      <option name="project" value="LOCAL" />
-      <updated>1780547419538</updated>
-    </task>
-    <task id="LOCAL-00020" summary="修复历史聊天记录加载不全问题，前端采用分页加载策略">
-      <option name="closed" value="true" />
-      <created>1780549598746</created>
-      <option name="number" value="00020" />
-      <option name="presentableId" value="LOCAL-00020" />
-      <option name="project" value="LOCAL" />
-      <updated>1780549598746</updated>
-    </task>
-    <option name="localTasksCounter" value="21" />
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -472,43 +271,6 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="项目初始化" />
-    <MESSAGE value="项目README.md更改" />
-    <MESSAGE value="AI虚拟陪伴项目-前后端调试成功" />
-    <MESSAGE value="修改requirements.txt文件" />
-    <MESSAGE value="解决记忆存储问题" />
-    <MESSAGE value="按虚拟角色类型隔离记忆存储（在存储和检索时额外添加 role_type 字段作为过滤条件）" />
-    <MESSAGE value="按虚拟角色类型隔离聊天记录（将role_type 纳入 thread_id）" />
-    <MESSAGE value="与所有虚拟角色的历史聊天记录进行存储和查询" />
-    <MESSAGE value="使用PostgreSQL数据库存储所有虚拟角色的历史聊天记录" />
-    <MESSAGE value="Redis在scheduler.py中具体使用" />
-    <MESSAGE value="多用户使用-隔离每个用户与所有角色类型之间的聊天记录" />
-    <MESSAGE value="用户认证与数据隔离" />
-    <MESSAGE value="celery+redis+postgresql+worker处理高并发场景" />
-    <MESSAGE value="locust性能测试 高并发场景" />
-    <MESSAGE value="高并发场景调试-解决记忆存储丢失问题" />
-    <MESSAGE value="mock高并发场景测试" />
-    <MESSAGE value="高并发场景处理总结" />
-    <MESSAGE value="增加游戏化系统功能（养成系统+每日任务+成就系统+角色皮肤/主题）" />
-    <MESSAGE value="修复历史聊天记录加载不全问题，前端采用分页加载策略" />
-    <option name="LAST_COMMIT_MESSAGE" value="修复历史聊天记录加载不全问题，前端采用分页加载策略" />
-  </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <default-breakpoints>
-        <breakpoint type="python-exception">
-          <properties notifyOnTerminate="true" exception="BaseException">
-            <option name="notifyOnTerminate" value="true" />
-          </properties>
-        </breakpoint>
-      </default-breakpoints>
-    </breakpoint-manager>
-  </component>
-  <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/EchoSoul$auth_router.coverage" NAME="auth_router 覆盖结果" MODIFIED="1780327632064" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/app/routers" />
-    <SUITE FILE_PATH="coverage/EchoSoul$agent.coverage" NAME="agent 覆盖结果" MODIFIED="1780122767155" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/EchoSoul$main.coverage" NAME="main 覆盖结果" MODIFIED="1780127537241" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/EchoSoul$locustfile.coverage" NAME="locustfile 覆盖结果" MODIFIED="1780470684355" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/EchoSoul$run.coverage" NAME="run 覆盖结果" MODIFIED="1780131102856" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
-    <SUITE FILE_PATH="coverage/EchoSoul$test_auth.coverage" NAME="test_auth 覆盖结果" MODIFIED="1780327309149" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <option name="LAST_COMMIT_MESSAGE" value="项目初始化" />
   </component>
 </project>

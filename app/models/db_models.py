@@ -1,11 +1,17 @@
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
-from sqlalchemy import Column, Integer, String, Float, Text, DateTime, func, PrimaryKeyConstraint, Boolean, Date, text
-from app.database import Base
+from sqlalchemy import Column, Integer, String, Float, Text, DateTime, func, PrimaryKeyConstraint, Boolean, Date, text, JSON, ForeignKey
+from sqlalchemy.orm import relationship, DeclarativeBase
+
+
+# ========== Base 定义 ==========
+class Base(DeclarativeBase):
+    pass
 
 # 北京时间时区对象
 BEIJING_TZ = ZoneInfo("Asia/Shanghai")
 
+# ========== 聊天历史 ==========
 class ChatHistory(Base):
     __tablename__ = "chat_history"
     id = Column(Integer, autoincrement=True)
@@ -36,6 +42,7 @@ class ChatHistory(Base):
         }
 
 
+# ========== 好感度 ==========
 class Affection(Base):
     __tablename__ = "affection"
     user_id = Column(String(64), primary_key=True)
@@ -106,3 +113,35 @@ class UserSkin(Base):
     role_type = Column(String(64), nullable=False)
     skin_id = Column(Integer, nullable=False)
     equipped = Column(Boolean, default=False)
+
+
+# ========== 共创叙事 ==========
+class Story(Base):
+    __tablename__ = "stories"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(64), nullable=False, index=True)
+    role_type = Column(String(64), nullable=False)
+    title = Column(String(255))
+    status = Column(String(32), default="active")
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    nodes = relationship("StoryNode", back_populates="story", order_by="StoryNode.created_at")
+    # 关键：添加 cascade 实现级联删除
+    nodes = relationship("StoryNode", back_populates="story",
+                         order_by="StoryNode.created_at",
+                         cascade="all, delete-orphan")
+
+
+class StoryNode(Base):
+    __tablename__ = "story_nodes"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    story_id = Column(Integer, ForeignKey('stories.id'), nullable=False)
+    parent_node_id = Column(Integer, nullable=True)
+    user_id = Column(String(64), nullable=True)
+    type = Column(String(20), nullable=False)  # start / user_input / ai_output / ending
+    content = Column(Text, nullable=False)
+    choices = Column(JSON, nullable=True)
+    selected_choice = Column(Integer, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    story = relationship("Story", back_populates="nodes")
+

@@ -27,6 +27,7 @@ class EmotionService(EmotionAnalyzer):
             max_tokens=60,
             api_key=settings.DASHSCOPE_API_KEY,
             base_url=settings.DASHSCOPE_BASE_URL,
+            extra_body={"enable_thinking": False}
         )
         # 绑定结构化输出，强制模型返回符合 EmotionResult 的 JSON
         self.structured_llm = base_llm.with_structured_output(

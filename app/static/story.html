@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>心流 · 故事工坊</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/story.css">
+</head>
+<body>
+  <div class="story-app">
+    <header class="story-header">
+      <a href="/chat" class="back-link">← 返回聊天</a>
+      <h1>📖 故事工坊</h1>
+      <div class="header-placeholder"></div>
+    </header>
+
+    <!-- 叙事起点视图 -->
+    <section id="startersView" class="story-view-active">
+      <div class="starters-grid" id="startersGrid"></div>
+    </section>
+
+    <!-- 故事进行中视图 -->
+    <section id="storyView" class="story-view-hidden">
+      <!-- 加载骨架屏 -->
+      <div id="loadingSkeleton" class="loading-skeleton" style="display:none;">
+        <div class="skeleton-line long"></div>
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line medium"></div>
+        <div class="skeleton-line short"></div>
+        <div class="skeleton-choices">
+          <div class="skeleton-btn"></div>
+          <div class="skeleton-btn"></div>
+          <div class="skeleton-btn"></div>
+        </div>
+      </div>
+      <!-- 剧情展示区 -->
+      <div class="story-messages" id="storyMessages"></div>
+      <!-- 快捷选项区 -->
+      <div class="story-suggestions" id="storySuggestions"></div>
+      <!-- 自由输入区（可折叠） -->
+      <div class="story-free-input" id="storyFreeInput">
+        <input type="text" id="freeTextInput" placeholder="✍️ 输入你想说的话或行动..." />
+        <button id="sendFreeTextBtn" class="btn-send">发送</button>
+      </div>
+      <!-- 自动续写按钮 -->
+      <button id="autoContinueBtn" class="btn-auto">✨ AI 自动续写</button>
+      <!-- 底部操作栏 -->
+      <div class="story-actions">
+        <button id="archiveBtn" class="btn-secondary">📁 存档</button>
+        <button id="replayBtn" class="btn-secondary">🔄 回放</button>
+        <button id="deleteBtn" class="btn-secondary btn-danger">🗑️ 删除</button>
+      </div>
+    </section>
+
+    <!-- 回放视图 -->
+    <section id="replayView" class="story-view-hidden">
+      <div class="replay-container" id="replayContainer"></div>
+      <button id="closeReplayBtn" class="btn-primary">返回故事</button>
+    </section>
+  </div>
+
+  <script src="/static/story.js"></script>
+</body>
+</html>

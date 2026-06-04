@@ -48,6 +48,7 @@ from app.tasks import process_chat
 from app.worker import process_postprocess_stream
 from app.routers import game_router  # 新增游戏化路由
 from app.game_service import GameService
+from app.routers import story_router
 
 logger = logging.getLogger(__name__)
 
@@ -312,7 +313,7 @@ class EchoSoulAPI:
         await self.chat_history.delete_history(current_user, role_type)
         return {"status": "ok"}
 
-
+    # 静态页面
     async def login_page(self):
         return FileResponse(str(self.static_dir / "login.html"))
 
@@ -325,6 +326,9 @@ class EchoSoulAPI:
     async def chat_page(self, request: Request):
         # 聊天页面通过URL参数传递角色，前端会解析
         return FileResponse(str(self.static_dir / "chat.html"))
+
+    async def story_page(self):
+        return FileResponse(str(self.static_dir / "story.html"))
 
 
     # ---------- 构建 FastAPI 应用 ----------
@@ -406,8 +410,14 @@ class EchoSoulAPI:
             dependencies=auth_deps
         )
 
-
-        app.include_router(game_router.router, dependencies=[Depends(get_current_user)])
+        app.include_router(
+            game_router.router,
+            dependencies=[Depends(get_current_user)]
+        )
+        app.include_router(
+            story_router.router,
+            dependencies=[Depends(get_current_user)]
+        )
 
         # ---------- 页面路由（无需认证） ----------
         app.add_api_route("/login", self.login_page, methods=["GET"])
@@ -416,6 +426,8 @@ class EchoSoulAPI:
         app.add_api_route("/chat", self.chat_page, methods=["GET"])  # 注意：GET /chat 返回聊天页面
         app.add_api_route("/", self.login_page, methods=["GET"])  # 根路径默认到登录页
         app.add_api_route("/game", self.game_page, methods=["GET"])  # 新增游戏中心页面
+        app.add_api_route("/story_page", self.story_page, methods=["GET"])
+
         # 将 /static 路径映射到实际的静态文件目录
         app.mount("/static", StaticFiles(directory=str(self.static_dir)), name="static")
 

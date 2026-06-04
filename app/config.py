@@ -13,8 +13,8 @@ class Settings(BaseSettings):
 
     # ---------- 模型选择 ----------
     LLM_MODEL: str = "deepseek-v4-pro"             # 对话模型
-    EMOTION_MODEL: str = "qwen3.6-plus"              # 情感分析模型
-    EMBED_MODEL: str = "text-embedding-v1"         # 向量嵌入模型
+    EMOTION_MODEL: str = "qwen3.6-plus"            # 情感分析模型
+    EMBED_MODEL: str = "text-embedding-v4"         # 向量嵌入模型
 
     # ---------- 服务 ----------
     HOST: str = "127.0.0.1"
@@ -25,7 +25,7 @@ class Settings(BaseSettings):
 
     # ---------- 记忆模块 ----------
     CHROMA_PATH: str = "./chroma_data"             # 向量数据库持久化路径
-    COLLECTION_NAME: str = "companion_memories"    # 集合名称
+    COLLECTION_NAME: str = "companion_memories_v4"    # 集合名称
     MEMORY_TOP_K: int = 5                          # 检索记忆数量
     SIMILARITY_THRESHOLD: float = 0.15             # 去重相似度阈值
 

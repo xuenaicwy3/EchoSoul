@@ -38,7 +38,7 @@ class MemoryService:
             name=settings.COLLECTION_NAME,
             metadata={"hnsw:space": "cosine"}
         )
-        logger.info("记忆服务初始化完成（Chroma HTTP 客户端）")
+        logger.info("记忆服务初始化完成（Chroma HTTP 客户端） 向量模型=%s", settings.EMBED_MODEL)
 
     def _get_dim(self) -> int:
         """自动获取向量维度，按优先级：1. Chroma已有数据 2. 调用一次嵌入API 3. 配置fallback"""
