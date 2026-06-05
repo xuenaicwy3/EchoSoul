@@ -2,7 +2,7 @@ import logging
 from typing import Dict
 from datetime import datetime, timedelta
 from sqlalchemy import select, update
-from sqlalchemy.dialects.postgresql import insert as pg_insert
+from app.config import Settings
 from app.database import get_async_session
 from app.models.db_models import Affection as AffectionModel
 from sqlalchemy import update, func   # 顶部添加导入
@@ -90,10 +90,10 @@ class AffectionService:
                     update(AffectionModel)
                     .where(AffectionModel.last_interaction < threshold)
                     .values(
-                        intimacy=AffectionModel.intimacy - 2.0,
-                        trust=AffectionModel.trust - 2.0,
-                        fun=AffectionModel.fun - 2.0,
-                        growth=AffectionModel.growth - 2.0
+                        intimacy=AffectionModel.intimacy - Settings.AFFECTION_DECAY_PER_DAY,
+                        trust=AffectionModel.trust - Settings.AFFECTION_DECAY_PER_DAY,
+                        fun=AffectionModel.fun - Settings.AFFECTION_DECAY_PER_DAY,
+                        growth=AffectionModel.growth - Settings.AFFECTION_DECAY_PER_DAY
                     )
                 )
         logger.info("好感度衰减完成")
