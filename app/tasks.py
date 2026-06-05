@@ -3,7 +3,7 @@ import json
 import threading
 import redis
 import psycopg
-from celery import shared_task
+from celery import shared_task, current_task
 from langgraph.checkpoint.postgres import PostgresSaver
 
 from app.affective_memory_service import AffectiveMemoryService
@@ -59,6 +59,7 @@ def process_chat(task_payload: dict) -> dict:
         # 推送后处理数据到 Redis Stream，与真实流程完全一致
         r = redis.Redis.from_url(settings.REDIS_URL)
         postprocess_data = {
+            "task_id": current_task.request.id,  # 当前任务 ID
             "user_id": user_id,
             "role_type": role_type,
             "user_input": task_payload.get("user_input", ""),
@@ -128,6 +129,7 @@ def process_chat(task_payload: dict) -> dict:
     # 推送后处理数据到 Redis Stream（使用同步客户端）
     r = redis.Redis.from_url(settings.REDIS_URL)
     postprocess_data = {
+        "task_id": current_task.request.id,  # 当前任务 ID
         "user_id": user_id,
         "role_type": role_type,
         "user_input": user_input,

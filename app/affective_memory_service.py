@@ -215,18 +215,21 @@ class AffectiveMemoryService:
                 for m in milestones
             ]
 
-    async def check_and_add_milestones(self, user_id: str, role_type: str, intimacy: float):
-        """根据亲密度自动添加里程碑"""
+    async def check_and_add_milestones(self, user_id: str, role_type: str, intimacy: float)-> bool:
+        """根据亲密度自动添加里程碑 并返回是否添加了新里程碑"""
         milestones = await self.get_milestones(user_id, role_type)
         existing_types = {m['event_type'] for m in milestones}
-
+        added = False
         if intimacy >= 30 and "intimacy_30" not in existing_types:
             await self.add_milestone(user_id, role_type, "亲密度达到30", "intimacy_30", "关系逐渐熟悉")
+            added = True
         if intimacy >= 50 and "intimacy_50" not in existing_types:
             await self.add_milestone(user_id, role_type, "亲密度达到50", "intimacy_50", "成为亲密伙伴")
+            added = True
         if intimacy >= 80 and "intimacy_80" not in existing_types:
             await self.add_milestone(user_id, role_type, "亲密度达到80", "intimacy_80", "深厚羁绊")
-
+            added = True
+        return added
 
     # ==================== 记忆摘要（迭代更新 + 智能触发） ====================
     async def get_memory_summary(self, user_id: str, role_type: str) -> str:
@@ -401,7 +404,7 @@ class AffectiveMemoryService:
             r = get_redis_client()
             await r.setex(f"structured_memory:{user_id}:{role_type}", 3600, raw_text)
             logger.info(f"结构化记忆已缓存 (长度={len(raw_text)})")
-            logger.info(f"结构化记忆已缓存: user={user_id[:8]}, role={role_type}, raw_text={raw_text}")
+            # logger.info(f"结构化记忆已缓存: user={user_id[:8]}, role={role_type}, raw_text={raw_text}")
 
     async def _llm_compress(self, text: str) -> str:
         """使用轻量 LLM 压缩文本，保留关键信息"""

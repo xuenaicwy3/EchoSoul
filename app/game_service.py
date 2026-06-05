@@ -8,6 +8,7 @@ from app.models.db_models import (
 )
 from app.config import Settings
 from datetime import datetime, timezone
+from app.websocket_manager import manager
 
 logger = logging.getLogger(__name__)
 
@@ -222,6 +223,14 @@ class GameService:
                         user_ach.completed_at = datetime.now(timezone.utc)  # 使用带时区的时间
                         # 发放奖励
                         await self._grant_intimacy(user_id, role_type, a.reward_intimacy)
+
+                        # WebSocket 推送成就解锁
+                        if self.settings.USE_WEBSOCKET:
+                            await manager.send_personal_message(user_id, {
+                                "type": "achievement",
+                                "content": f"🏆 成就解锁：{a.name}"
+                            })
+
 
             await s.commit()
 

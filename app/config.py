@@ -47,8 +47,12 @@ class Settings(BaseSettings):
     # ---------- 嵌入维度 ----------
     EMBEDDING_DIM: int = 1536  # 阿里云 text-embedding-v1 的向量维度
 
+    USE_WEBSOCKET: bool = True  # 是否启用 WebSocket，默认开启
+    WS_HEARTBEAT_INTERVAL: int = 30  # WebSocket 心跳间隔（秒）
+
     # ---------- 测试模式 ----------
     TEST_MODE: bool = False   # 设为 True 则跳过所有 AI 调用
+
 
     model_config = {
         "env_file": ".env",           # 指定从 .env 文件读取

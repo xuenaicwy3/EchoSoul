@@ -9,6 +9,7 @@ from app.game_service import GameService
 from app.redis_client import get_redis_client
 from app.agent import EchoSoulAgent
 from app.config import Settings                # ← 新增导入
+from app.websocket_manager import manager
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +60,21 @@ async def process_postprocess_stream(agent: EchoSoulAgent):
                         emotion=task["emotion"],
                     )
                     await r.xack("postprocess_stream", group, msg_id)
+
+                    # 推送 AI 回复到 WebSocket（如果启用）
+                    if settings.USE_WEBSOCKET:
+                        try:
+                            await manager.send_personal_message(task["user_id"], {
+                                "type": "chat_reply",
+                                "task_id": task.get("task_id"),
+                                "reply": task["ai_reply"],
+                                "emotion": task["emotion"]
+                            })
+                            logger.info(
+                                f"WebSocket 推送成功: user={task['user_id'][:8]}, reply_length={len(task['ai_reply'])}")
+                        except Exception as e:
+                            logger.error(f"WebSocket 推送失败: {e}")
+
                     # 然后处理成就，即使失败也不影响消息消费
                     try:
                         await game_service.update_achievements(task["user_id"], task["role_type"], task["user_input"])

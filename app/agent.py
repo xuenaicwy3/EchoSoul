@@ -22,6 +22,8 @@ from app.affection import AffectionService
 from app.models.schemas import AgentState
 from langchain_core.runnables import RunnableConfig
 
+from app.websocket_manager import manager
+
 logger = logging.getLogger(__name__)
 
 
@@ -212,7 +214,14 @@ class EchoSoulAgent:
 
             try:
                 aff = await self.affection_svc.get(user_id, role_type)
-                await self.affective_memory_svc.check_and_add_milestones(user_id, role_type, aff.get('intimacy', 0))
+                milestone_added = await self.affective_memory_svc.check_and_add_milestones(
+                    user_id, role_type, aff.get('intimacy', 0)
+                )
+                if milestone_added and self.settings.USE_WEBSOCKET:
+                    await manager.send_personal_message(user_id, {
+                        "type": "milestone",
+                        "content": f"🎉 你们的关系有了新的进展！"
+                    })
             except Exception as e:
                 logger.error(f"里程碑检查失败: {e}")
 

@@ -23,7 +23,9 @@ from app.models.db_models import (
     UserFact,
     EmotionRecord,
     RelationshipMilestone,
-    UserMemorySummary
+    UserMemorySummary,
+    LifeLog,  # 新增
+    UserOfflineSettings,  # 新增
 )
 
 

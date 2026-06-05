@@ -12,7 +12,7 @@ import psycopg
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from app.checkpoint_setup import init_checkpoint_tables
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, WebSocket, WebSocketDisconnect, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.params import Depends
 from fastapi.staticfiles import StaticFiles
@@ -49,6 +49,8 @@ from app.worker import process_postprocess_stream
 from app.routers import game_router  # 新增游戏化路由
 from app.game_service import GameService
 from app.routers import story_router
+from app.websocket_manager import manager
+from app.auth import decode_access_token  # 复用已有的 token 解码函数
 
 logger = logging.getLogger(__name__)
 
@@ -369,6 +371,7 @@ class EchoSoulAPI:
             logger.critical("未捕获异常: %s", exc, exc_info=True)
             return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
+
         # ---------- API 路由（需要认证） ----------
         # 需要认证的路由统一添加 dependencies
         auth_deps = [Depends(get_current_user)]
@@ -438,6 +441,24 @@ class EchoSoulAPI:
 
         # 将 /static 路径映射到实际的静态文件目录
         app.mount("/static", StaticFiles(directory=str(self.static_dir)), name="static")
+
+        # WebSocket 端点
+        @app.websocket("/ws/{user_id}")
+        async def websocket_endpoint(websocket: WebSocket, user_id: str, token: str = Query(...)):
+            # 验证 token
+            uid = decode_access_token(token)
+            if not uid or uid != user_id:
+                await websocket.close(code=4001, reason="Authentication failed")
+                return
+
+            await manager.connect(user_id, websocket)
+            try:
+                while True:
+                    data = await websocket.receive_text()
+                    if data == "ping":
+                        await websocket.send_text("pong")
+            except WebSocketDisconnect:
+                manager.disconnect(user_id)
 
 
         logger.info("FastAPI 应用构建完成")

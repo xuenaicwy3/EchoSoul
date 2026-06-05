@@ -198,3 +198,28 @@ class UserMemorySummary(Base):
     created_at = Column(DateTime(timezone=True), server_default=text("(now() AT TIME ZONE 'utc')"))
     updated_at = Column(DateTime(timezone=True), server_default=text("(now() AT TIME ZONE 'utc')"),
                         onupdate=lambda: datetime.now(timezone.utc))
+
+
+# ==================== 时空异步伴生体验 ====================
+class LifeLog(Base):
+    """AI 自动生成的生活日志"""
+    __tablename__ = "life_logs"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(64), nullable=False, index=True)
+    role_type = Column(String(64), nullable=False)
+    content = Column(Text, nullable=False)
+    log_type = Column(String(32), default="daily")   # daily / miss_you / custom
+    created_at = Column(DateTime(timezone=True), server_default=text("(now() AT TIME ZONE 'utc')"))
+
+
+class UserOfflineSettings(Base):
+    """用户离线陪伴设置"""
+    __tablename__ = "user_offline_settings"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(64), nullable=False, unique=True, index=True)
+    role_type = Column(String(64), nullable=False)
+    life_log_enabled = Column(Boolean, default=True)
+    companion_enabled = Column(Boolean, default=False)
+    companion_start = Column(String(5), nullable=True)  # HH:MM (UTC)
+    companion_end = Column(String(5), nullable=True)
+    last_log_at = Column(DateTime(timezone=True), nullable=True)

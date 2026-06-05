@@ -4,9 +4,23 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="386caada-63df-470c-a0c1-925864ae15ee" name="更改" comment="记忆摘要与上下文压缩方案：迭代更新摘要、按需触发重生成、智能裁剪最终文本，确保在有限上下文窗口内保留最关键信息。">
+    <list default="true" id="386caada-63df-470c-a0c1-925864ae15ee" name="更改" comment="修复Celery Worker从Redis缓存中读取结构化记忆文本">
+      <change afterPath="$PROJECT_DIR$/app/offline_service.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/websocket_manager.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/affective_memory_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/affective_memory_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/agent.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/database.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/dependencies.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/dependencies.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/game_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/game_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/db_models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/db_models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/scheduler.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/scheduler.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/static/chat.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/static/chat.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/tasks.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/tasks.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/worker.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/worker.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -230,7 +244,7 @@
       <workItem from="1780031945426" duration="536000" />
       <workItem from="1780032487130" duration="1187000" />
       <workItem from="1780577354672" duration="9108000" />
-      <workItem from="1780630343795" duration="11026000" />
+      <workItem from="1780630343795" duration="23382000" />
     </task>
     <task id="LOCAL-00001" summary="项目初始化">
       <option name="closed" value="true" />
@@ -272,7 +286,15 @@
       <option name="project" value="LOCAL" />
       <updated>1780640668790</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="修复Celery Worker从Redis缓存中读取结构化记忆文本">
+      <option name="closed" value="true" />
+      <created>1780641554807</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1780641554807</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -295,6 +317,7 @@
     <MESSAGE value="实现情感记忆系统（事实层--&gt;情感层--&gt;关系层--&gt;记忆摘要）" />
     <MESSAGE value="实现情感记忆系统,Redis缓存结构化记忆摘要，Celery Worker读取Redis存储的记忆摘要，" />
     <MESSAGE value="记忆摘要与上下文压缩方案：迭代更新摘要、按需触发重生成、智能裁剪最终文本，确保在有限上下文窗口内保留最关键信息。" />
-    <option name="LAST_COMMIT_MESSAGE" value="记忆摘要与上下文压缩方案：迭代更新摘要、按需触发重生成、智能裁剪最终文本，确保在有限上下文窗口内保留最关键信息。" />
+    <MESSAGE value="修复Celery Worker从Redis缓存中读取结构化记忆文本" />
+    <option name="LAST_COMMIT_MESSAGE" value="修复Celery Worker从Redis缓存中读取结构化记忆文本" />
   </component>
 </project>

@@ -106,6 +106,80 @@
 
     loadSessions();
 
+    // =================== WebSocket 连接（自动降级）=============================
+    let useWebSocket = true;           // 尝试使用 WebSocket，失败后变为 false
+    let ws = null;
+    let wsCurrentTaskId = null;        // 当前等待 WebSocket 回复的任务 ID
+    let wsTimeout = null;              // WebSocket 超时计时器
+
+    // 已处理的任务 ID 集合（避免重复显示）
+    const resolvedTasks = new Set();
+
+    // 初始化 WebSocket
+    function initWebSocket() {
+      if (!useWebSocket) return;
+      const wsUrl = `ws://${window.location.host}/ws/${USER_ID}?token=${TOKEN}`;
+      ws = new WebSocket(wsUrl);
+
+      ws.onopen = () => {
+        console.log('WebSocket 已连接');
+        // 心跳保活
+        setInterval(() => {
+        if (ws && ws.readyState === WebSocket.OPEN) ws.send('ping');
+        }, 30000);
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        handleWsMessage(data);
+      } catch (e) {
+        console.error('WebSocket 消息解析失败', e);
+        }
+    };
+
+    ws.onclose = () => {
+      console.log('WebSocket 断开，降级为轮询');
+      useWebSocket = false;
+      ws = null;
+    };
+
+    ws.onerror = (err) => {
+      console.error('WebSocket 错误', err);
+      ws.close();
+      };
+    }
+
+    // 处理 WebSocket 推送的消息
+    function handleWsMessage(data) {
+      if (data.type === 'chat_reply') {
+        // 如果该任务 ID 已经被任何方式处理过，直接忽略
+        if (resolvedTasks.has(data.task_id)) {
+          console.log(`WebSocket 消息重复，已忽略 task_id=${data.task_id}`);
+          return;
+        }
+
+        // 立即标记为已处理，防止轮询后续拿到同样的任务 ID
+        resolvedTasks.add(data.task_id);
+
+        // 如果正好是当前等待的任务，清除超时计时器
+        if (wsCurrentTaskId === data.task_id) {
+          clearTimeout(wsTimeout);
+          wsCurrentTaskId = null;
+          wsTimeout = null;
+        }
+
+        typingHint.style.setProperty('opacity', '0', 'important');
+        if (data.reply) {
+          addMessage('ai', data.reply, formatTime());
+        }
+      }
+      // 其他类型消息照常处理...
+    }
+
+    // 页面加载时尝试连接 WebSocket
+    initWebSocket();
+
     // DOM 元素
     const chatArea = document.getElementById('chatArea');
     const userInput = document.getElementById('userInput');
@@ -346,6 +420,7 @@
       typingHint.style.setProperty('opacity', '1', 'important');
 
       try {
+        // 发送消息，获取 task_id
         const res = await api(`${API_BASE}/chat`, {
           method: 'POST',
           body: JSON.stringify({ message, role_type: activeSessionRole })
@@ -353,40 +428,83 @@
         const data = await res.json();
         const taskId = data.task_id;
 
-        // 轮询结果
-        let replyData = null;
-        let errorMsg = null;
-        for (let i = 0; i < 30; i++) {
-          await new Promise(r => setTimeout(r, 500));
-          try {
-              const pollRes = await api(`${API_BASE}/chat/result/${taskId}`);
-              const pollData = await pollRes.json();
-
-              if (pollData.reply) {
-                  replyData = pollData;
-                  break;
-              }
-              if (pollData.error) {
-                  errorMsg = pollData.error;
-                  break;
-              }
-              // 如果是 { status: "pending" }，继续轮询
-          } catch (err) {
-              console.error('轮询请求异常', err);
-              // 网络异常时继续重试
-          }
-        }
-
-        typingHint.style.setProperty('opacity', '0', 'important');
-
-        if (replyData) {
-          addMessage('ai', replyData.reply, formatTime());
+        // 判断当前是否可使用 WebSocket
+        if (useWebSocket && ws && ws.readyState === WebSocket.OPEN) {
+          // WebSocket 模式：等待推送，设置超时
+          wsCurrentTaskId = taskId;
+          wsTimeout = setTimeout(() => {
+            // 超时，回退到轮询
+            console.warn('WebSocket 超时，切换为轮询');
+            wsCurrentTaskId = null;
+            wsTimeout = null;
+             // 启动轮询前检查是否已被处理
+            if (!resolvedTasks.has(taskId)) {
+              startPolling(taskId);
+            }
+          }, 15000);
         } else {
-          addMessage('ai', '😢 AI 回复超时，请稍后再试~', formatTime());
+          // 轮询模式
+          startPolling(taskId);
         }
       } catch (err) {
-        typingHint.style.setProperty('opacity', '0', 'important');
-        addMessage('ai', '😢 网络出小差了，请稍后再试~', formatTime());
+          typingHint.style.setProperty('opacity', '0', 'important');
+          addMessage('ai', '😢 网络出小差了，请稍后再试~', formatTime());
+        }
+      }
+
+    // 轮询逻辑（从原函数抽离）
+    async function startPolling(taskId) {
+      // 如果该任务已经被 WebSocket 处理过，直接退出轮询
+      if (resolvedTasks.has(taskId)) {
+        console.log(`轮询跳过 task_id=${taskId}，已被 WebSocket 处理`);
+        return;
+      }
+
+      let replyData = null;
+      let errorMsg = null;
+      for (let i = 0; i < 30; i++) {
+        await new Promise(r => setTimeout(r, 500));
+        // 每次循环前检查，防止 WebSocket 在轮询中途处理了此任务
+        if (resolvedTasks.has(taskId)) {
+          console.log(`轮询中断 task_id=${taskId}，已被 WebSocket 处理`);
+          return;
+        }
+        try {
+          const pollRes = await api(`${API_BASE}/chat/result/${taskId}`);
+          const pollData = await pollRes.json();
+          if (pollData.reply) {
+            replyData = pollData;
+            break;
+          }
+          if (pollData.error) {
+            errorMsg = pollData.error;
+            break;
+          }
+        } catch (err) {
+          console.error('轮询请求异常', err);
+        }
+      }
+
+      // 再次确认，可能在等待 response 时 WebSocket 已经处理
+      if (resolvedTasks.has(taskId)) return;
+
+      // 立即标记，防止 WebSocket 晚来推送
+      resolvedTasks.add(taskId);
+      typingHint.style.setProperty('opacity', '0', 'important');
+
+      if (replyData) {
+        addMessage('ai', replyData.reply, formatTime());
+      } else if (errorMsg) {
+        addMessage('ai', `😢 ${errorMsg}`, formatTime());
+      } else {
+        addMessage('ai', '😢 AI 回复超时，请稍后再试~', formatTime());
+      }
+
+      // 清除可能残留的 WebSocket 超时
+      if (wsCurrentTaskId === taskId) {
+        clearTimeout(wsTimeout);
+        wsCurrentTaskId = null;
+        wsTimeout = null;
       }
     }
 
@@ -401,6 +519,7 @@
     function addMessage(type, text, time) {
       const session = sessions.find(s => s.roleType === activeSessionRole);
       const avatarEmoji = type === 'ai' ? (session?.emoji || '🌸') : '😊';
+
       const msgDiv = document.createElement('div');
       msgDiv.className = `message ${type}`;
       msgDiv.innerHTML = `

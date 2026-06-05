@@ -2,8 +2,12 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from app.auth import decode_access_token
+from fastapi import WebSocket, Query, Depends
+from fastapi.exceptions import HTTPException
+
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+
 
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> str:
     user_id = decode_access_token(token)
@@ -14,3 +18,5 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> str:
             headers={"WWW-Authenticate": "Bearer"},
         )
     return user_id
+
+
