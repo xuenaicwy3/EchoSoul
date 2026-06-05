@@ -12,8 +12,10 @@ from app.emotions import EmotionService
 from app.memory import MemoryService
 from app.affection import AffectionService
 from app.config import Settings
-
+import logging
 settings = Settings()
+
+logger = logging.getLogger(__name__)
 
 _agent = None
 _lock = threading.Lock()
@@ -98,6 +100,26 @@ def process_chat(task_payload: dict) -> dict:
     config = {"configurable": {"thread_id": thread_id}}
 
     agent = _build_agent()
+
+    # 从 Redis 获取结构化记忆缓存
+    structured_mem = ""
+    try:
+        r = redis.Redis.from_url(settings.REDIS_URL)
+        cached = r.get(f"structured_memory:{user_id}:{role_type}")
+        if cached:
+            structured_mem = cached.decode('utf-8')
+            logger.info(f"从 Redis 获取结构化记忆缓存成功 structured_mem={structured_mem}")
+    except Exception as e:
+        logger.error(f"读取结构化记忆缓存失败: {e}")
+
+    # 获取 Chroma 语义记忆（同步）
+    chroma_mem = agent.memory_svc.retrieve(user_id=user_id, query=task_payload["user_input"], role_type=role_type)
+
+    # 组合记忆并写入 state
+    parts = [chroma_mem, structured_mem]
+    init_state["memory_text"] = "\n".join([p for p in parts if p])
+
+    config = {"configurable": {"thread_id": task_payload["thread_id"]}}
     # 使用同步 invoke，确保检查点正常工作
     result = agent.invoke(init_state, config)
 
@@ -111,7 +133,6 @@ def process_chat(task_payload: dict) -> dict:
         "emotion": result.get("emotion", {}),
     }
     r.xadd("postprocess_stream", {"data": json.dumps(postprocess_data)})
-
 
     return {
         "reply": result.get("final_response", ""),

@@ -32,14 +32,17 @@ celery_app.conf.update(
     }
 )
 
+# @worker_ready.connect
+# def on_worker_ready(**kwargs):
+#     """Worker 启动后，初始化数据库（仅用于检查点）和 Redis"""
+#     async def _init():
+#         # 初始化异步引擎（用于数据库后处理？不，这里不需要后处理，只需检查点）
+#         # 实际上 PostgresSaver 使用同步连接，不需要异步引擎
+#         pass
+#     # 这里不需要 asyncio.run，因为 init_db 是异步的，但检查点用同步连接。
+#     # 我们可以在 tasks.py 中创建 PostgresSaver 时使用同步连接。
+#     print("[Celery Worker] Worker 就绪")
+
 @worker_ready.connect
 def on_worker_ready(**kwargs):
-    """Worker 启动后，初始化数据库（仅用于检查点）和 Redis"""
-    async def _init():
-        # 初始化异步引擎（用于数据库后处理？不，这里不需要后处理，只需检查点）
-        # 实际上 PostgresSaver 使用同步连接，不需要异步引擎
-        pass
-    # 这里不需要 asyncio.run，因为 init_db 是异步的，但检查点用同步连接。
-    # 我们可以在 tasks.py 中创建 PostgresSaver 时使用同步连接。
     print("[Celery Worker] Worker 就绪")
-

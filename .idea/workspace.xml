@@ -4,14 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="386caada-63df-470c-a0c1-925864ae15ee" name="更改" comment="实现共创叙事系统（叙事起点推荐--&gt;剧情分支选择--&gt;AI自适应生成--&gt;多结局见证--&gt;叙事存档与回放）">
-      <change afterPath="$PROJECT_DIR$/app/affective_memory_service.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/routers/affective_memory_router.py" afterDir="false" />
+    <list default="true" id="386caada-63df-470c-a0c1-925864ae15ee" name="更改" comment="实现情感记忆系统（事实层--&gt;情感层--&gt;关系层）">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/affective_memory_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/affective_memory_service.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/models/db_models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/db_models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/celery_app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/celery_app.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/static/chat.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/static/chat.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/tasks.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/tasks.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -50,23 +49,23 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "DefaultHtmlFileTemplate": "HTML File",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "develop",
-    "list.type.of.created.stylesheet": "CSS",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;develop&quot;,
+    &quot;list.type.of.created.stylesheet&quot;: &quot;CSS&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RunManager" selected="Python.main">
     <configuration name="agent" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="EchoSoul" />
@@ -234,6 +233,8 @@
       <updated>1780031944293</updated>
       <workItem from="1780031945426" duration="536000" />
       <workItem from="1780032487130" duration="1187000" />
+      <workItem from="1780577354672" duration="9108000" />
+      <workItem from="1780630343795" duration="5681000" />
     </task>
     <task id="LOCAL-00001" summary="项目初始化">
       <option name="closed" value="true" />
@@ -243,7 +244,15 @@
       <option name="project" value="LOCAL" />
       <updated>1780032404791</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="实现情感记忆系统（事实层--&gt;情感层--&gt;关系层）">
+      <option name="closed" value="true" />
+      <created>1780585495683</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1780585495683</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -262,6 +271,7 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="项目初始化" />
-    <option name="LAST_COMMIT_MESSAGE" value="项目初始化" />
+    <MESSAGE value="实现情感记忆系统（事实层--&gt;情感层--&gt;关系层）" />
+    <option name="LAST_COMMIT_MESSAGE" value="实现情感记忆系统（事实层--&gt;情感层--&gt;关系层）" />
   </component>
 </project>

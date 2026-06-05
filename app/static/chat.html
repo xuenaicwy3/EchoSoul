@@ -356,8 +356,8 @@
         // 轮询结果
         let replyData = null;
         let errorMsg = null;
-        for (let i = 0; i < 60; i++) {
-          await new Promise(r => setTimeout(r, 200));
+        for (let i = 0; i < 30; i++) {
+          await new Promise(r => setTimeout(r, 500));
           try {
               const pollRes = await api(`${API_BASE}/chat/result/${taskId}`);
               const pollData = await pollRes.json();

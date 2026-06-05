@@ -9,6 +9,9 @@ from app.models.db_models import UserFact, EmotionRecord, RelationshipMilestone,
 from app.config import Settings
 from langchain.chat_models import init_chat_model
 from langchain_core.messages import HumanMessage
+from collections import Counter
+
+from app.redis_client import get_redis_client
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +82,8 @@ class AffectiveMemoryService:
             logger.warning("数据库未初始化，跳过事实提取")
             return
         try:
-            prompt = f"""分析下面的对话，提取关于用户的重要个人信息（如姓名、生日、喜好、讨厌的事物、职业、宠物等），以 JSON 格式返回，key 为信息类型，value 为信息内容。如果没有明确信息则返回空 JSON。只输出 JSON，不要有任何其他文字。
+            prompt = f"""分析下面的对话，提取关于用户的重要个人信息（如姓名、生日、喜好、讨厌的事物、职业、宠物等），
+            以 JSON 格式返回，key 为信息类型，value 为信息内容。如果没有明确信息则返回空 JSON。只输出 JSON，不要有任何其他文字。
 
             用户: {user_msg}
             角色: {ai_reply}
@@ -96,8 +100,10 @@ class AffectiveMemoryService:
                 for key, value in data.items():
                     if value and str(value).strip():
                         await self.add_fact(user_id, role_type, key, str(value), "extracted")
+                logger.info(f"事实提取成功: {raw[:50]}")
             else:
-                logger.debug(f"事实提取未发现有效信息: {raw[:50]}")
+                logger.info(f"事实提取未发现有效信息: {raw[:50]}")
+
         except Exception as e:
             logger.error(f"事实提取失败: {e}")
 
@@ -138,7 +144,6 @@ class AffectiveMemoryService:
                 logger.info(f"情感趋势: user={user_id[:8]}, role={role_type}, 暂无记录")
                 return {"records": [], "dominant_emotion": "neutral", "trend": "平稳"}
 
-            from collections import Counter
             labels = [r.label for r in records]
             dominant = Counter(labels).most_common(1)[0][0]
 
@@ -295,3 +300,44 @@ class AffectiveMemoryService:
                 if cached:
                     return cached.summary
                 return ""
+
+    # ==================== Redis 缓存 ====================
+    async def cache_structured_memory(self, user_id: str, role_type: str):
+        """聚合所有结构化记忆并缓存到 Redis，供 Celery 任务快速读取
+           结构化记忆格式如下（例如：）
+          关于用户的已知信息：
+            - 喜好: 喜欢看动漫《学战都市》，尤其喜欢角色尤莉丝、刀藤绮凛、沙沙宫纱夜
+            用户最近情绪: love(0.9), love(0.9), love(0.9)，主导情绪: love，趋势: 上扬/平稳/低落/数据不足
+            重要事件：
+            - 亲密度达到80 (2026-06-04)
+            - 亲密度达到50 (2026-06-04)
+            - 亲密度达到30 (2026-06-04)
+            【用户画像摘要】你发自内心地喜欢尤莉丝，这份情感是你近期最鲜明的动力。今天你们的亲密度一路攀升，先后突破了30、50，最终达到80，
+            关系进展相当显著。你整体沉浸在一种平稳的喜悦之中，心情明朗而安定
+        """
+        parts = []
+        facts = await self.get_facts(user_id, role_type)
+        if facts:
+            fact_lines = "\n".join([f"- {f['key']}: {f['value']}" for f in facts])
+            parts.append(f"关于用户的已知信息：\n{fact_lines}")
+
+        trend = await self.get_emotion_trend(user_id, role_type, limit=5)
+        if trend['records']:
+            recent = ", ".join([f"{r['label']}({r['score']:.1f})" for r in trend['records'][-3:]])
+            parts.append(f"用户最近情绪: {recent}，主导情绪: {trend['dominant_emotion']}，趋势: {trend['trend']}")
+
+        milestones = await self.get_milestones(user_id, role_type)
+        if milestones:
+            milestone_text = "重要事件：\n" + "\n".join(
+                [f"- {m['event']} ({m['time'][:10]})" for m in milestones[:3]])
+            parts.append(milestone_text)
+
+        summary = await self.get_memory_summary(user_id, role_type)
+        if summary:
+            parts.append(f"【用户画像摘要】{summary}")
+
+        mem_text = "\n".join(parts)
+        if mem_text:
+            r = get_redis_client()
+            await r.setex(f"structured_memory:{user_id}:{role_type}", 3600, mem_text)
+            logger.info(f"结构化记忆已缓存: user={user_id[:8]}, role={role_type}")

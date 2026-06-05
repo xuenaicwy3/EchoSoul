@@ -121,51 +121,7 @@ class EchoSoulAgent:
         return state
 
     def _memory_node(self, state: AgentState) -> AgentState:
-        user_id = state["user_id"]
-        user_msg = state["user_input"]
-        role_type = state.get("role_type", "日系动漫型")
-
-        # retrieve 是同步方法，在 Celery 同步任务中直接调用（测试模式下返回假记忆，见 memory.py）
-        # 1. 原有 Chroma 语义检索（同步）
-        chroma_mem = self.memory_svc.retrieve(user_id=user_id, query=user_msg, role_type=role_type)
-
-        # 2. 情感记忆系统（异步 → 用 asyncio.run 在同步节点中执行）
-        structured_mem = ""
-        if hasattr(self, 'affective_memory_svc'):
-            async def _fetch_affective_memory():
-                parts = []
-                # 事实
-                facts = await self.affective_memory_svc.get_facts(user_id, role_type)
-                if facts:
-                    fact_lines = "\n".join([f"- {f['key']}: {f['value']}" for f in facts])
-                    parts.append(f"关于用户的已知信息：\n{fact_lines}")
-                # 情感趋势
-                trend = await self.affective_memory_svc.get_emotion_trend(user_id, role_type, limit=5)
-                if trend['records']:
-                    recent = ", ".join([f"{r['label']}({r['score']:.1f})" for r in trend['records'][-3:]])
-                    parts.append(f"用户最近情绪: {recent}，主导情绪: {trend['dominant_emotion']}，趋势: {trend['trend']}")
-                # 里程碑
-                milestones = await self.affective_memory_svc.get_milestones(user_id, role_type)
-                if milestones:
-                    milestone_text = "重要事件：\n" + "\n".join(
-                        [f"- {m['event']} ({m['time'][:10]})" for m in milestones[:3]])
-                    parts.append(milestone_text)
-                # 记忆摘要（新增）
-                # summary = await self.affective_memory_svc.get_memory_summary(user_id, role_type)
-                # logger.info("[memory_node] 获取 用户画像摘要: %s", summary)
-                # if summary:
-                #     parts.append(f"【用户画像摘要】{summary}")
-                #     # logger.info("[memory_node] 获取 用户画像摘要: %s", summary)
-                return "\n".join(parts)
-
-            try:
-                structured_mem = asyncio.run(_fetch_affective_memory())
-            except Exception as e:
-                logger.error(f"情感记忆检索失败: {e}")
-
-        # 组合最终记忆
-        parts = [chroma_mem, structured_mem]
-        state["memory_text"] = "\n".join([p for p in parts if p])
+        # 结构化记忆和语义记忆已在 tasks.py 中注入 init_state["memory_text"]，此处无需额外操作
         return state
 
 
@@ -240,30 +196,28 @@ class EchoSoulAgent:
             user_id, user_message, ai_reply, emotion, role_type
         )
 
-        # ---------- 情感记忆系统（非关键路径，失败不影响主流程） ----------
+        # ---------- 情感记忆系统（调用Redis缓存）----------
         if hasattr(self, 'affective_memory_svc'):
-            # 事实提取
             try:
-                await self.affective_memory_svc.extract_facts_from_conversation(
-                    user_id, role_type, user_message, ai_reply
-                )
+                await self.affective_memory_svc.extract_facts_from_conversation(user_id, role_type, user_message,
+                                                                                ai_reply)
             except Exception as e:
                 logger.error(f"事实提取失败: {e}")
 
-            # 情感记录
             try:
-                await self.affective_memory_svc.record_emotion(
-                    user_id, role_type, emotion.get('label', 'neutral'),
-                    emotion.get('score', 0.5), user_message
-                )
+                await self.affective_memory_svc.record_emotion(user_id, role_type, emotion.get('label', 'neutral'),
+                                                               emotion.get('score', 0.5), user_message)
             except Exception as e:
                 logger.error(f"情感记录失败: {e}")
 
-            # 里程碑检查
             try:
                 aff = await self.affection_svc.get(user_id, role_type)
-                await self.affective_memory_svc.check_and_add_milestones(
-                    user_id, role_type, aff.get('intimacy', 0)
-                )
+                await self.affective_memory_svc.check_and_add_milestones(user_id, role_type, aff.get('intimacy', 0))
             except Exception as e:
                 logger.error(f"里程碑检查失败: {e}")
+
+            # 缓存结构化记忆到 Redis，供 Celery 任务使用
+            try:
+                await self.affective_memory_svc.cache_structured_memory(user_id, role_type)
+            except Exception as e:
+                logger.error(f"缓存结构化记忆失败: {e}")
