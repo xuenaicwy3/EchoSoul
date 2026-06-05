@@ -8,12 +8,15 @@ from app.database import get_async_session
 from app.models.db_models import UserFact, EmotionRecord, RelationshipMilestone, UserMemorySummary
 from app.config import Settings
 from langchain.chat_models import init_chat_model
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from collections import Counter
 
 from app.redis_client import get_redis_client
 
 logger = logging.getLogger(__name__)
+
+# 结构化记忆文本最大长度（字符），超出后会进行压缩
+MAX_MEMORY_TEXT_LENGTH = 1200
 
 
 class AffectiveMemoryService:
@@ -28,6 +31,16 @@ class AffectiveMemoryService:
             api_key=settings.DASHSCOPE_API_KEY,
             base_url=settings.DASHSCOPE_BASE_URL,
         )
+        # 摘要生成 / 压缩用模型（可配置为更大模型以提升质量）
+        self.summary_llm = init_chat_model(
+            model=settings.LLM_MODEL,
+            model_provider="openai",
+            temperature=0.2,
+            max_tokens=300,
+            api_key=settings.DASHSCOPE_API_KEY,
+            base_url=settings.DASHSCOPE_BASE_URL,
+        )
+
 
     # ==================== 事实层 ====================
     async def add_fact(self, user_id: str, role_type: str, key: str, value: str, source: str = "extracted"):
@@ -215,129 +228,235 @@ class AffectiveMemoryService:
             await self.add_milestone(user_id, role_type, "亲密度达到80", "intimacy_80", "深厚羁绊")
 
 
-    # ==================== 记忆摘要 ====================
+    # ==================== 记忆摘要（迭代更新 + 智能触发） ====================
     async def get_memory_summary(self, user_id: str, role_type: str) -> str:
-        """获取或生成记忆摘要（带缓存，避免频繁调用LLM）"""
+        """获取或生成用户画像摘要，支持基于旧摘要迭代更新"""
         try:
             session = get_async_session()
         except RuntimeError:
-            logger.warning("数据库未初始化，返回空摘要")
             return ""
 
         async with session() as s:
-            # 1. 查询现有摘要
+            # 查询现有摘要
             result = await s.execute(
                 select(UserMemorySummary)
                 .where(UserMemorySummary.user_id == user_id, UserMemorySummary.role_type == role_type)
-                .order_by(desc(UserMemorySummary.updated_at))
-                .limit(1)
+                .order_by(desc(UserMemorySummary.updated_at)).limit(1)
             )
             cached = result.scalar_one_or_none()
 
-            # 2. 获取当前情感记录总数，判断是否需要重新生成
-            count_result = await s.execute(
-                select(func.count()).select_from(EmotionRecord).where(
-                    EmotionRecord.user_id == user_id,
-                    EmotionRecord.role_type == role_type
-                )
-            )
-            current_emotion_count = count_result.scalar() or 0
+            # 统计各维度数据量，用于触发重生成
+            fact_count = (await s.execute(select(func.count()).select_from(UserFact).where(
+                UserFact.user_id == user_id, UserFact.role_type == role_type))).scalar() or 0
+            emotion_count = (await s.execute(select(func.count()).select_from(EmotionRecord).where(
+                EmotionRecord.user_id == user_id, EmotionRecord.role_type == role_type))).scalar() or 0
+            milestone_count = (await s.execute(select(func.count()).select_from(RelationshipMilestone).where(
+                RelationshipMilestone.user_id == user_id, RelationshipMilestone.role_type == role_type))).scalar() or 0
 
-            # 缓存条件：摘要存在、情感记录无新增超过5条、距离上次生成不到1小时
-            if cached and cached.emotion_count and current_emotion_count - cached.emotion_count <= 5:
-                if cached.updated_at and (datetime.now(timezone.utc) - cached.updated_at).total_seconds() < 3600:
-                    logger.info(f"使用缓存的记忆摘要: user={user_id[:8]}")
-                    return cached.summary
+            # 判断是否需要重生成：
+            # 1. 没有缓存
+            # 2. 新事实数 > 缓存时的事实数 + 3
+            # 3. 新情感记录数 > 缓存时的情感记录数 + 10
+            # 4. 新里程碑数 > 缓存时的里程碑数
+            need_regenerate = not cached
+            if cached:
+                if fact_count > (cached.fact_count or 0) + 3:
+                    need_regenerate = True
+                if emotion_count > (cached.emotion_count or 0) + 10:
+                    need_regenerate = True
+                if milestone_count > (cached.milestone_count or 0):
+                    need_regenerate = True
+                # 超过24小时也强制刷新
+                if (datetime.now(timezone.utc) - cached.updated_at).total_seconds() > 86400:
+                    need_regenerate = True
 
-            # 3. 重新生成摘要
+            if not need_regenerate and cached:
+                logger.info("无需更新摘要，使用缓存")
+                return cached.summary
+
+            # 准备生成材料
             facts = await self.get_facts(user_id, role_type)
             trend = await self.get_emotion_trend(user_id, role_type, limit=10)
             milestones = await self.get_milestones(user_id, role_type)
 
-            # 构建 prompt
             fact_text = "\n".join([f"- {f['key']}: {f['value']}" for f in facts]) if facts else "暂无"
-            emotion_text = f"主导情绪: {trend['dominant_emotion']}，趋势: {trend['trend']}" if trend[
-                'records'] else "暂无"
-            milestone_text = "\n".join(
-                [f"- {m['event']} ({m['time'][:10]})" for m in milestones[:3]]) if milestones else "暂无"
+            emotion_text = f"主导情绪: {trend['dominant_emotion']}，趋势: {trend['trend']}" if trend['records'] else "暂无"
+            milestone_text = "\n".join([f"- {m['event']} ({m['time'][:10]})" for m in milestones[:5]]) if milestones else "暂无"
 
-            prompt = f"""请根据下面的用户信息，生成一段简短的用户画像摘要（不超过150字），用于AI角色与用户的对话上下文中。
+            # 构建生成 / 更新提示词
+            if cached and cached.summary:
+                # 迭代更新模式
+                prompt = f"""你是一位用户画像维护助手。下面是一份已有的用户画像摘要，以及最近发生的新信息。请基于这些内容更新画像摘要，确保保留重要历史信息，同时融入新变化。输出不超过200字。
 
-            用户基本资料：
-            {fact_text}
+                已有画像：
+                {cached.summary}
+                
+                最新资料：
+                - 事实：{fact_text}
+                - 近期情绪：{emotion_text}
+                - 重要事件：{milestone_text}
+                
+                请输出更新后的用户画像摘要（不要编号，直接叙述）："""
+            else:
+                # 首次生成模式
+                prompt = f"""请根据下面的用户信息，生成一段简短的用户画像摘要（不超过200字），用于AI角色与用户的对话上下文中。
 
-            用户近期情绪状态：
-            {emotion_text}
-
-            重要关系事件：
-            {milestone_text}
-
-            请用流畅的自然语言概括，不要编号，直接输出摘要内容。"""
+                用户基本资料：
+                {fact_text}
+                
+                用户近期情绪状态：
+                {emotion_text}
+                
+                重要关系事件：
+                {milestone_text}
+                
+                请用流畅的自然语言概括，不要编号，直接输出摘要内容。"""
 
             try:
                 messages = [HumanMessage(content=prompt)]
                 loop = asyncio.get_running_loop()
-                response = await loop.run_in_executor(None, self.extract_llm.invoke, messages)
-                summary = response.content.strip()
+                response = await loop.run_in_executor(None, self.summary_llm.invoke, messages)
+                new_summary = response.content.strip()
 
-                # 存入缓存
+                # 更新缓存
                 if cached:
-                    cached.summary = summary
-                    cached.emotion_count = current_emotion_count
+                    cached.summary = new_summary
+                    cached.emotion_count = emotion_count
+                    cached.fact_count = fact_count
+                    cached.milestone_count = milestone_count
                     cached.updated_at = datetime.now(timezone.utc)
                 else:
+                    # 注意：UserMemorySummary 模型需要扩展字段 fact_count, milestone_count
+                    # 如果还没有这些字段，请先在 db_models.py 中添加
                     cached = UserMemorySummary(
                         user_id=user_id, role_type=role_type,
-                        summary=summary, emotion_count=current_emotion_count
+                        summary=new_summary, emotion_count=emotion_count,
+                        fact_count=fact_count, milestone_count=milestone_count
                     )
                     s.add(cached)
                 await s.commit()
-                logger.info(f"记忆摘要已更新: user={user_id[:8]}, length={len(summary)}")
-                return summary
+                logger.info(f"记忆摘要已{'更新' if cached else '生成'}，长度={len(new_summary)}")
+                return new_summary
             except Exception as e:
-                logger.error(f"生成记忆摘要失败: {e}")
-                # 如果生成失败但有旧缓存，返回旧缓存
-                if cached:
-                    return cached.summary
-                return ""
+                logger.error(f"摘要生成失败: {e}")
+                return cached.summary if cached else ""
 
-    # ==================== Redis 缓存 ====================
-    async def cache_structured_memory(self, user_id: str, role_type: str):
-        """聚合所有结构化记忆并缓存到 Redis，供 Celery 任务快速读取
-           结构化记忆格式如下（例如：）
-          关于用户的已知信息：
-            - 喜好: 喜欢看动漫《学战都市》，尤其喜欢角色尤莉丝、刀藤绮凛、沙沙宫纱夜
-            用户最近情绪: love(0.9), love(0.9), love(0.9)，主导情绪: love，趋势: 上扬/平稳/低落/数据不足
-            重要事件：
-            - 亲密度达到80 (2026-06-04)
-            - 亲密度达到50 (2026-06-04)
-            - 亲密度达到30 (2026-06-04)
-            【用户画像摘要】你发自内心地喜欢尤莉丝，这份情感是你近期最鲜明的动力。今天你们的亲密度一路攀升，先后突破了30、50，最终达到80，
-            关系进展相当显著。你整体沉浸在一种平稳的喜悦之中，心情明朗而安定
-        """
+    # ==================== 结构化记忆缓存（带上下文压缩） ====================
+    async def cache_structured_memory(self, user_id: str, role_type: str,
+                                      facts: Optional[List[Dict]] = None,
+                                      trend: Optional[Dict] = None,
+                                      milestones: Optional[List[Dict]] = None,
+                                      summary: Optional[str] = None):
+        """聚合结构化记忆并写入 Redis，支持复用数据, 若文本过长则进行智能压缩"""
+        if facts is None:
+            facts = await self.get_facts(user_id, role_type)
+        if trend is None:
+            trend = await self.get_emotion_trend(user_id, role_type, limit=5)
+        if milestones is None:
+            milestones = await self.get_milestones(user_id, role_type)
+        if summary is None:
+            summary = await self.get_memory_summary(user_id, role_type)
+
+        # 构建原始记忆文本
         parts = []
-        facts = await self.get_facts(user_id, role_type)
+
+        # 事实
         if facts:
             fact_lines = "\n".join([f"- {f['key']}: {f['value']}" for f in facts])
             parts.append(f"关于用户的已知信息：\n{fact_lines}")
 
-        trend = await self.get_emotion_trend(user_id, role_type, limit=5)
-        if trend['records']:
+        # 情感趋势
+        if trend and trend['records']:
             recent = ", ".join([f"{r['label']}({r['score']:.1f})" for r in trend['records'][-3:]])
             parts.append(f"用户最近情绪: {recent}，主导情绪: {trend['dominant_emotion']}，趋势: {trend['trend']}")
 
-        milestones = await self.get_milestones(user_id, role_type)
+        # 里程碑（补上，只取最近3条，避免过长）
         if milestones:
             milestone_text = "重要事件：\n" + "\n".join(
                 [f"- {m['event']} ({m['time'][:10]})" for m in milestones[:3]])
             parts.append(milestone_text)
 
-        summary = await self.get_memory_summary(user_id, role_type)
+        # 用户画像摘要
         if summary:
             parts.append(f"【用户画像摘要】{summary}")
 
-        mem_text = "\n".join(parts)
-        if mem_text:
+        raw_text = "\n".join(parts)
+
+        # 智能压缩：如果总长度超过阈值，则只保留摘要 + 情感趋势，舍弃详细事实和里程碑
+        if len(raw_text) > MAX_MEMORY_TEXT_LENGTH and summary:
+            # 策略：仅保留摘要和情感趋势，舍弃详细事实列表
+            compressed = []
+            if trend and trend['records']:
+                recent = ", ".join([f"{r['label']}({r['score']:.1f})" for r in trend['records'][-3:]])
+                compressed.append(f"用户最近情绪: {recent}，主导情绪: {trend['dominant_emotion']}")
+            if summary:
+                compressed.append(f"【用户画像摘要】{summary}")
+            raw_text = "\n".join(compressed)
+
+        # 若仍然超标，动用轻量 LLM 二次压缩
+        if len(raw_text) > MAX_MEMORY_TEXT_LENGTH:
+            raw_text = await self._llm_compress(raw_text)
+
+        if raw_text:
             r = get_redis_client()
-            await r.setex(f"structured_memory:{user_id}:{role_type}", 3600, mem_text)
-            logger.info(f"结构化记忆已缓存: user={user_id[:8]}, role={role_type}")
+            await r.setex(f"structured_memory:{user_id}:{role_type}", 3600, raw_text)
+            logger.info(f"结构化记忆已缓存 (长度={len(raw_text)})")
+            logger.info(f"结构化记忆已缓存: user={user_id[:8]}, role={role_type}, raw_text={raw_text}")
+
+    async def _llm_compress(self, text: str) -> str:
+        """使用轻量 LLM 压缩文本，保留关键信息"""
+        try:
+            messages = [
+                SystemMessage(content="请将以下信息压缩为一段不超过150字的摘要，保留重要的事实和情感倾向。"),
+                HumanMessage(content=text)
+            ]
+            loop = asyncio.get_running_loop()
+            response = await loop.run_in_executor(None, self.summary_llm.invoke, messages)
+            compressed = response.content.strip()
+            return compressed if compressed else text[:MAX_MEMORY_TEXT_LENGTH]
+        except Exception as e:
+            logger.error(f"LLM压缩失败: {e}")
+            return text[:MAX_MEMORY_TEXT_LENGTH]
+
+
+
+    # ==================== Redis 缓存 ====================
+    # async def cache_structured_memory(self, user_id: str, role_type: str):
+    #     """聚合所有结构化记忆并缓存到 Redis，供 Celery 任务快速读取
+    #        结构化记忆格式如下（例如：）
+    #       关于用户的已知信息：
+    #         - 喜好: 喜欢看动漫《学战都市》，尤其喜欢角色尤莉丝、刀藤绮凛、沙沙宫纱夜
+    #         用户最近情绪: love(0.9), love(0.9), love(0.9)，主导情绪: love，趋势: 上扬/平稳/低落/数据不足
+    #         重要事件：
+    #         - 亲密度达到80 (2026-06-04)
+    #         - 亲密度达到50 (2026-06-04)
+    #         - 亲密度达到30 (2026-06-04)
+    #         【用户画像摘要】你发自内心地喜欢尤莉丝，这份情感是你近期最鲜明的动力。今天你们的亲密度一路攀升，先后突破了30、50，最终达到80，
+    #         关系进展相当显著。你整体沉浸在一种平稳的喜悦之中，心情明朗而安定
+    #     """
+    #     parts = []
+    #     facts = await self.get_facts(user_id, role_type)
+    #     if facts:
+    #         fact_lines = "\n".join([f"- {f['key']}: {f['value']}" for f in facts])
+    #         parts.append(f"关于用户的已知信息：\n{fact_lines}")
+    #
+    #     trend = await self.get_emotion_trend(user_id, role_type, limit=5)
+    #     if trend['records']:
+    #         recent = ", ".join([f"{r['label']}({r['score']:.1f})" for r in trend['records'][-3:]])
+    #         parts.append(f"用户最近情绪: {recent}，主导情绪: {trend['dominant_emotion']}，趋势: {trend['trend']}")
+    #
+    #     milestones = await self.get_milestones(user_id, role_type)
+    #     if milestones:
+    #         milestone_text = "重要事件：\n" + "\n".join(
+    #             [f"- {m['event']} ({m['time'][:10]})" for m in milestones[:3]])
+    #         parts.append(milestone_text)
+    #
+    #     summary = await self.get_memory_summary(user_id, role_type)
+    #     if summary:
+    #         parts.append(f"【用户画像摘要】{summary}")
+    #
+    #     mem_text = "\n".join(parts)
+    #     if mem_text:
+    #         r = get_redis_client()
+    #         await r.setex(f"structured_memory:{user_id}:{role_type}", 3600, mem_text)
+    #         logger.info(f"结构化记忆已缓存: user={user_id[:8]}, role={role_type}")

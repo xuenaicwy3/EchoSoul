@@ -193,6 +193,8 @@ class UserMemorySummary(Base):
     role_type = Column(String(64), nullable=False)
     summary = Column(Text, nullable=False)
     emotion_count = Column(Integer, default=0)           # 生成摘要时的情感记录数
+    fact_count = Column(Integer, default=0)              # 新增
+    milestone_count = Column(Integer, default=0)         # 新增
     created_at = Column(DateTime(timezone=True), server_default=text("(now() AT TIME ZONE 'utc')"))
     updated_at = Column(DateTime(timezone=True), server_default=text("(now() AT TIME ZONE 'utc')"),
                         onupdate=lambda: datetime.now(timezone.utc))

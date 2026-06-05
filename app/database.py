@@ -65,6 +65,8 @@ async def init_db(settings: Settings):
         await conn.execute(text(
             "SELECT setval('chat_history_id_seq', COALESCE((SELECT MAX(id) FROM chat_history), 1))"
         ))
+        # 自动补充可能缺失的列（幂等操作）
+        await _ensure_memory_summary_columns(conn)
     logging.info("数据库初始化完成，准备就绪")
 
 
@@ -126,6 +128,29 @@ async def _create_partitioned_table(conn):
         CREATE INDEX idx_chat_history_user_role_time ON chat_history (user_id, role_type, timestamp DESC)
     """))
     logging.info("分区表 chat_history 创建完成")
+
+
+async def _ensure_memory_summary_columns(conn):
+    """自动检查并添加 user_memory_summaries 表中可能缺失的列"""
+    # 检查 fact_count 列
+    check_sql = text("""
+        SELECT column_name FROM information_schema.columns 
+        WHERE table_name='user_memory_summaries' AND column_name='fact_count'
+    """)
+    result = await conn.execute(check_sql)
+    if not result.fetchone():
+        await conn.execute(text("ALTER TABLE user_memory_summaries ADD COLUMN fact_count INTEGER DEFAULT 0"))
+        logging.info("自动添加列 user_memory_summaries.fact_count")
+
+    # 检查 milestone_count 列
+    check_sql = text("""
+        SELECT column_name FROM information_schema.columns 
+        WHERE table_name='user_memory_summaries' AND column_name='milestone_count'
+    """)
+    result = await conn.execute(check_sql)
+    if not result.fetchone():
+        await conn.execute(text("ALTER TABLE user_memory_summaries ADD COLUMN milestone_count INTEGER DEFAULT 0"))
+        logging.info("自动添加列 user_memory_summaries.milestone_count")
 
 
 async def close_db():

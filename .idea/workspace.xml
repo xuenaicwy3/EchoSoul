@@ -4,7 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="386caada-63df-470c-a0c1-925864ae15ee" name="更改" comment="实现情感记忆系统（事实层--&gt;情感层--&gt;关系层--&gt;记忆摘要）" />
+    <list default="true" id="386caada-63df-470c-a0c1-925864ae15ee" name="更改" comment="实现情感记忆系统,Redis缓存结构化记忆摘要，Celery Worker读取Redis存储的记忆摘要，">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/affective_memory_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/affective_memory_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/database.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/db_models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/db_models.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -227,7 +232,7 @@
       <workItem from="1780031945426" duration="536000" />
       <workItem from="1780032487130" duration="1187000" />
       <workItem from="1780577354672" duration="9108000" />
-      <workItem from="1780630343795" duration="6071000" />
+      <workItem from="1780630343795" duration="10051000" />
     </task>
     <task id="LOCAL-00001" summary="项目初始化">
       <option name="closed" value="true" />
@@ -253,7 +258,15 @@
       <option name="project" value="LOCAL" />
       <updated>1780636441802</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="实现情感记忆系统,Redis缓存结构化记忆摘要，Celery Worker读取Redis存储的记忆摘要，">
+      <option name="closed" value="true" />
+      <created>1780636577409</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1780636577409</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -274,6 +287,7 @@
     <MESSAGE value="项目初始化" />
     <MESSAGE value="实现情感记忆系统（事实层--&gt;情感层--&gt;关系层）" />
     <MESSAGE value="实现情感记忆系统（事实层--&gt;情感层--&gt;关系层--&gt;记忆摘要）" />
-    <option name="LAST_COMMIT_MESSAGE" value="实现情感记忆系统（事实层--&gt;情感层--&gt;关系层--&gt;记忆摘要）" />
+    <MESSAGE value="实现情感记忆系统,Redis缓存结构化记忆摘要，Celery Worker读取Redis存储的记忆摘要，" />
+    <option name="LAST_COMMIT_MESSAGE" value="实现情感记忆系统,Redis缓存结构化记忆摘要，Celery Worker读取Redis存储的记忆摘要，" />
   </component>
 </project>
