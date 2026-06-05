@@ -241,23 +241,23 @@ class EchoSoulAPI:
         )
         return {"task_id": task.id, "status": "pending"}
 
-    async def get_chat_result(self, task_id: str):
-        result = AsyncResult(task_id, app=celery_app)
-        if result.ready():
-            if result.successful():
-                data = result.result
-                return ChatResponse(
-                    reply=data["reply"],
-                    emotion=data["emotion"],
-                    role=data["role"]
-                )
-            else:
-                return JSONResponse(
-                    status_code=500,
-                    content={"detail": f"任务执行失败: {str(result.info)}"}
-                )
-        else:
-            return {"status": "processing", "task_id": task_id}
+    # async def get_chat_result(self, task_id: str):
+    #     result = AsyncResult(task_id, app=celery_app)
+    #     if result.ready():
+    #         if result.successful():
+    #             data = result.result
+    #             return ChatResponse(
+    #                 reply=data["reply"],
+    #                 emotion=data["emotion"],
+    #                 role=data["role"]
+    #             )
+    #         else:
+    #             return JSONResponse(
+    #                 status_code=500,
+    #                 content={"detail": f"任务执行失败: {str(result.info)}"}
+    #             )
+    #     else:
+    #         return {"status": "processing", "task_id": task_id}
 
 
     async def _get_affection_info(self, role_type: str, current_user: str = Depends(get_current_user)) -> tuple[str, str]:
@@ -388,6 +388,7 @@ class EchoSoulAPI:
             response_model=AffectionResponse,
             dependencies=auth_deps
         )
+        # 主动消息获取接口
         app.add_api_route(
             "/active_messages",
             self.get_active_messages,

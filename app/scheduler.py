@@ -10,11 +10,16 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from langchain.chat_models import init_chat_model
 from app.config import Settings
+from app.database import get_async_session
 from app.roles import RoleCatalog
 from app.prompts import PromptFactory
 from app.affection import AffectionService
 from app.redis_client import get_redis_client
 from app.offline_service import OfflineService
+from app.affective_memory_service import AffectiveMemoryService
+from app.chat_history import ChatHistoryManager
+from sqlalchemy import select, distinct
+from app.models.db_models import ChatHistory as ChatHistoryModel
 
 logger = logging.getLogger(__name__)
 
@@ -42,20 +47,26 @@ class ProactiveScheduler:
             datetime.now().isoformat(),
         )
 
+
+
     async def get_pending(self, user_id: str) -> List[str]:
         """获取待推送的主动消息并清空队列"""
-        key = f"user:pending_messages:{user_id}"
-        redis = get_redis_client()
-        async with redis.pipeline() as pipe:
-            await pipe.lrange(key, 0, -1)
-            await pipe.delete(key)
-            results = await pipe.execute()
-        return results[0] if results else []
+        try:
+            key = f"user:pending_messages:{user_id}"
+            redis = get_redis_client()
+            async with redis.pipeline() as pipe:
+                await pipe.lrange(key, 0, -1)
+                await pipe.delete(key)
+                results = await pipe.execute()
+                return results[0] if results else []
+        except Exception as e:
+            logger.error(f"获取待处理消息失败: {e}")
+            return []
 
     async def _check_and_generate(self):
-        """扫描非活跃用户，生成主动消息"""
+        """原有的主动消息扫描 + 新增的离线生活日志生成"""
         redis = get_redis_client()
-        # 使用 scan_iter 替代 keys（生产环境推荐）
+        # 扫描不活跃用户并生成主动消息
         cursor = 0
         while True:
             cursor, keys = await redis.scan(
@@ -73,13 +84,11 @@ class ProactiveScheduler:
                     pending_key = f"user:pending_messages:{uid}"
                     if await redis.exists(pending_key):
                         continue
-                    role_type = "温柔贤淑型"
+                    role_type = "日系动漫美少女型"
                     role = RoleCatalog.get_role(role_type)
                     aff = await self.affection.get(uid, role_type)
                     avg_aff = sum(aff.values()) / 4
-                    prompt = PromptFactory.proactive_message(
-                        role.name, role.persona, avg_aff
-                    )
+                    prompt = PromptFactory.proactive_message(role, avg_aff)
                     loop = asyncio.get_running_loop()
                     resp = await loop.run_in_executor(None, self.llm.invoke, prompt)
                     msg = resp.content.strip()
@@ -100,10 +109,15 @@ class ProactiveScheduler:
                 finally:
                     await redis.delete(lock_key)
 
+        # 新增：离线生活日志生成
+        await self._generate_offline_life_logs(redis)
 
     async def _generate_offline_life_logs(self, redis):
-        """扫描长时间未活动且开启了生活日志的用户，生成日志"""
+        """为长时间未活动的用户生成生活日志，并推送到离线队列"""
         offline_svc = OfflineService(self.settings)
+        chat_history_mgr = ChatHistoryManager()
+        affective_memory_svc = AffectiveMemoryService(self.settings)
+
         cursor = 0
         while True:
             cursor, keys = await redis.scan(cursor, match="user:last_active:*", count=100)
@@ -113,35 +127,59 @@ class ProactiveScheduler:
                 if not last_active_str:
                     continue
                 last_active = datetime.fromisoformat(last_active_str)
-                # 离线超过设定的不活跃小时数
                 if (datetime.now() - last_active) > timedelta(hours=self.settings.INACTIVE_HOURS):
-                    # 这里简化处理，遍历该用户的所有角色（实际中你应该查询用户创建了哪些角色会话）
-                    # 这里以 "温柔贤淑型" 为例，你可以改为遍历用户的所有角色
-                    role_type = "温柔贤淑型"
-                    settings = await offline_svc.get_settings(uid, role_type)
-                    if settings.get("life_log_enabled"):
-                        # 检查上次生成日志时间，避免重复生成
-                        last_log = await offline_svc.get_life_logs(uid, role_type, limit=1)
-                        if last_log:
-                            last_time = datetime.fromisoformat(last_log[0]["time"])
-                            if (datetime.now(timezone.utc) - last_time) < timedelta(hours=6):
-                                continue
-                        # 获取聊天历史（这里简化，实际应查询最近聊天记录）
-                        chat_history_text = ""  # 可调用 chat_history 服务获取
-                        facts_text = ""  # 可调用 affective_memory_service 获取
-                        content = await offline_svc.generate_life_log(uid, role_type, chat_history_text, facts_text)
-                        logger.info(f"已生成生活日志: user={uid[:8]}, role={role_type}, content={content}")
-                        await offline_svc.save_life_log(uid, role_type, content)
-
-                        # ===== 关键：调用 push_message_to_user 推送给用户 =====
-                        await offline_svc.push_message_to_user(
-                            uid, role_type,
-                            f"💌 你的伙伴写下了生活日志：{content[:100]}...",
-                            use_ws=True
+                    session = get_async_session()
+                    async with session() as s:
+                        roles_result = await s.execute(
+                            select(distinct(ChatHistoryModel.role_type)).where(
+                                ChatHistoryModel.user_id == uid
+                            )
                         )
+                        roles = [row[0] for row in roles_result.fetchall()]
+
+                    for role_type in roles:
+                        user_settings = await offline_svc.get_settings(uid, role_type)
+                        if not user_settings.get("life_log_enabled", True):
+                            continue
+
+                        last_logs = await offline_svc.get_life_logs(uid, role_type, limit=1)
+                        if last_logs:
+                            last_log_time = datetime.fromisoformat(last_logs[0]["time"])
+                            if (datetime.now(timezone.utc) - last_log_time) < timedelta(hours=6):
+                                continue
+
+                        history = await chat_history_mgr.get_history(uid, role_type, limit=5)
+                        chat_text = "\n".join(
+                            [f"{'用户' if h['sender'] == 'user' else 'AI'}：{h['message']}" for h in history])
+
+                        facts = await affective_memory_svc.get_facts(uid, role_type)
+                        facts_text = "\n".join([f"{f['key']}: {f['value']}" for f in facts]) if facts else ""
+
+                        content = await offline_svc.generate_life_log(uid, role_type, chat_text, facts_text)
+                        if content:
+                            # 1. 保存到数据库（新增）
+                            await chat_history_mgr.add_message(
+                                user_id=uid,
+                                role_type=role_type,
+                                sender="ai",  # 作为 AI 消息存储
+                                message=f"💌 你的伙伴写下了新的生活日志：{content}"  # 完整日志内容
+                            )
+
+                            # 2. 推送到 Redis 离线队列
+                            await offline_svc.save_life_log(uid, role_type, content)
+                            await offline_svc.push_message_to_user(
+                                uid, role_type,
+                                f"💌 你的伙伴写下了新的生活日志：{content[:100]}...",
+                                use_ws=False
+                            )
+
+                            # 3. 保存到专门的 life_logs 表（如果还希望单独管理日志）
+                            await offline_svc.save_life_log(uid, role_type, content)
+
+                            logger.info(f"离线日志已生成并推送: user={uid[:8]}, role={role_type}")
+
             if cursor == 0:
                 break
-
 
     def start(self):
         self._scheduler.add_job(
@@ -154,4 +192,3 @@ class ProactiveScheduler:
 
     def shutdown(self):
         self._scheduler.shutdown()
-

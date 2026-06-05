@@ -180,6 +180,9 @@
     // 页面加载时尝试连接 WebSocket
     initWebSocket();
 
+    // 每30秒自动检查离线消息（生活日志等）
+    setInterval(loadOfflineMessages, 30000);
+
     // DOM 元素
     const chatArea = document.getElementById('chatArea');
     const userInput = document.getElementById('userInput');
@@ -283,6 +286,7 @@
 
       await loadHistory(roleType);
       renderSessionList();
+      await loadOfflineMessages();   // 加载离线消息
     }
 
     async function deleteSession(roleType) {
@@ -508,6 +512,24 @@
       }
     }
 
+    // ===================== 加载离线消息（保持不变） =====================
+    async function loadOfflineMessages() {
+      try {
+        const res = await api(`${API_BASE}/active_messages`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.messages && data.messages.length > 0) {
+            data.messages.forEach(msg => {
+              // 将生活日志作为 AI 消息展示
+              addMessage('ai', msg, formatTime());
+            });
+          }
+        }
+      } catch (e) {
+        console.warn('获取离线消息失败', e);
+      }
+    }
+
     function sendUserMessage() {
       const text = userInput.value.trim();
       if (!text) return;
@@ -562,6 +584,7 @@
     } else {
       renderSessionList();
     }
+
   </script>
 </body>
 </html>

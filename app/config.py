@@ -33,12 +33,12 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
 
     # ---------- 好感度系统 ----------
-    # AFFECTION_DB_PATH: str = "affection.db"        # SQLite 数据库路径
-    # AFFECTION_DECAY_PER_DAY: float = 2.0           # 每天衰减值
+    AFFECTION_DB_PATH: str = "affection.db"        # SQLite 数据库路径
+    AFFECTION_DECAY_PER_DAY: float = 2.0           # 每天衰减值
 
     # ---------- 主动消息调度 ----------
-    INACTIVE_HOURS: int = 2                        # 连续未互动小时数后触发
-    SCHEDULER_INTERVAL_MINUTES: int = 60           # 检查间隔（分钟）
+    INACTIVE_HOURS: float= 2                      # 离线2小时后生成日志
+    SCHEDULER_INTERVAL_MINUTES: int = 60               # 每60分钟扫描一次离线用户
 
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 单位：分钟（默认 24 小时）
     SECRET_KEY: str = "my-super-secret-key-change-this-in-production"
