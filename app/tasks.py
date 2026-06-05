@@ -101,16 +101,19 @@ def process_chat(task_payload: dict) -> dict:
 
     agent = _build_agent()
 
-    # 从 Redis 获取结构化记忆缓存
+    # ---- 获取结构化记忆（从 Redis 缓存） ----
     structured_mem = ""
     try:
         r = redis.Redis.from_url(settings.REDIS_URL)
         cached = r.get(f"structured_memory:{user_id}:{role_type}")
         if cached:
             structured_mem = cached.decode('utf-8')
-            logger.info(f"从 Redis 获取结构化记忆缓存成功 structured_mem={structured_mem}")
+            logger.info(f"[Celery] 成功读取结构化记忆缓存 (长度={len(structured_mem)})")
+            # logger.info(f"从 Redis 获取结构化记忆缓存成功 structured_mem={structured_mem}")
+        else:
+            logger.info("[Celery] Redis 中无结构化记忆缓存，使用空记忆")
     except Exception as e:
-        logger.error(f"读取结构化记忆缓存失败: {e}")
+        logger.error(f"[Celery] 读取结构化记忆缓存失败: {e}")
 
     # 获取 Chroma 语义记忆（同步）
     chroma_mem = agent.memory_svc.retrieve(user_id=user_id, query=task_payload["user_input"], role_type=role_type)
@@ -119,7 +122,6 @@ def process_chat(task_payload: dict) -> dict:
     parts = [chroma_mem, structured_mem]
     init_state["memory_text"] = "\n".join([p for p in parts if p])
 
-    config = {"configurable": {"thread_id": task_payload["thread_id"]}}
     # 使用同步 invoke，确保检查点正常工作
     result = agent.invoke(init_state, config)
 
