@@ -4,12 +4,19 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="386caada-63df-470c-a0c1-925864ae15ee" name="更改" comment="时空异步伴生体验-WebSocket离线消息推送实现">
+    <list default="true" id="386caada-63df-470c-a0c1-925864ae15ee" name="更改" comment="时空异步伴生体验-WebSocket离线消息推送实现-消息内容持久化存储-AI 自动生成生活日志">
+      <change afterPath="$PROJECT_DIR$/voice_companion_demo.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/affection.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/affection.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/affective_memory_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/affective_memory_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/celery_app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/celery_app.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/config.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/prompts.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/prompts.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/scheduler.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/scheduler.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/static/chat.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/static/chat.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/tasks.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/tasks.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/worker.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/worker.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -24,6 +31,17 @@
         <option value="JavaScript File" />
         <option value="Python Script" />
       </list>
+    </option>
+  </component>
+  <component name="FlaskConsoleOptions" custom-start-script="import sys; print('Python %s on %s' % (sys.version, sys.platform)); sys.path.extend([WORKING_DIR_AND_PYTHON_PATHS])&#10;from flask.cli import ScriptInfo, NoAppException&#10;for module in [&quot;main.py&quot;, &quot;wsgi.py&quot;, &quot;app.py&quot;]:&#10;    try: locals().update(ScriptInfo(app_import_path=module, create_app=None).load_app().make_shell_context()); print(&quot;\nFlask App: %s&quot; % app.import_name); break&#10;    except NoAppException: pass">
+    <envs>
+      <env key="FLASK_APP" value="app" />
+    </envs>
+    <option name="myCustomStartScript" value="import sys; print('Python %s on %s' % (sys.version, sys.platform)); sys.path.extend([WORKING_DIR_AND_PYTHON_PATHS])&#10;from flask.cli import ScriptInfo, NoAppException&#10;for module in [&quot;main.py&quot;, &quot;wsgi.py&quot;, &quot;app.py&quot;]:&#10;    try: locals().update(ScriptInfo(app_import_path=module, create_app=None).load_app().make_shell_context()); print(&quot;\nFlask App: %s&quot; % app.import_name); break&#10;    except NoAppException: pass" />
+    <option name="myEnvs">
+      <map>
+        <entry key="FLASK_APP" value="app" />
+      </map>
     </option>
   </component>
   <component name="Git.Settings">
@@ -52,6 +70,7 @@
   &quot;keyToString&quot;: {
     &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
     &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Python.voice_companion_demo.executor&quot;: &quot;Run&quot;,
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
@@ -63,33 +82,14 @@
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  },
+  &quot;keyToStringList&quot;: {
+    &quot;DatabaseDriversLRU&quot;: [
+      &quot;postgresql&quot;
+    ]
   }
 }</component>
-  <component name="RunManager" selected="Python.main">
-    <configuration name="agent" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="EchoSoul" />
-      <option name="ENV_FILES" value="" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="SDK_NAME" value="D:\Develop\PyCharm\envs\EchoSoul" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-      <option name="IS_MODULE_SDK" value="false" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="D:\Develop\PyCharm\Projects\EchoSoul\app\agent.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
+  <component name="RunManager" selected="Python.voice_companion_demo">
     <configuration name="auth_router" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="EchoSoul" />
       <option name="ENV_FILES" value="" />
@@ -205,13 +205,36 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="voice_companion_demo" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="EchoSoul" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/voice_companion_demo.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.voice_companion_demo" />
         <item itemvalue="Python.test_auth" />
         <item itemvalue="Python.run" />
         <item itemvalue="Python.locustfile" />
         <item itemvalue="Python.auth_router" />
-        <item itemvalue="Python.agent" />
       </list>
     </recent_temporary>
   </component>
@@ -233,7 +256,17 @@
       <workItem from="1780031945426" duration="536000" />
       <workItem from="1780032487130" duration="1187000" />
       <workItem from="1780577354672" duration="9108000" />
-      <workItem from="1780630343795" duration="29542000" />
+      <workItem from="1780630343795" duration="33455000" />
+      <workItem from="1780723037636" duration="4915000" />
+      <workItem from="1780920236616" duration="41000" />
+      <workItem from="1780981542730" duration="1067000" />
+      <workItem from="1781012877030" duration="92000" />
+      <workItem from="1781013993550" duration="5722000" />
+      <workItem from="1781062002339" duration="5004000" />
+      <workItem from="1781070318378" duration="2734000" />
+      <workItem from="1781101608340" duration="786000" />
+      <workItem from="1781148654404" duration="14505000" />
+      <workItem from="1781237457840" duration="9783000" />
     </task>
     <task id="LOCAL-00001" summary="项目初始化">
       <option name="closed" value="true" />
@@ -291,7 +324,23 @@
       <option name="project" value="LOCAL" />
       <updated>1780658563464</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="时空异步伴生体验-WebSocket离线消息推送实现-消息内容持久化存储">
+      <option name="closed" value="true" />
+      <created>1780664510541</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1780664510542</updated>
+    </task>
+    <task id="LOCAL-00009" summary="时空异步伴生体验-WebSocket离线消息推送实现-消息内容持久化存储-AI 自动生成生活日志">
+      <option name="closed" value="true" />
+      <created>1780664762093</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1780664762093</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -316,6 +365,11 @@
     <MESSAGE value="记忆摘要与上下文压缩方案：迭代更新摘要、按需触发重生成、智能裁剪最终文本，确保在有限上下文窗口内保留最关键信息。" />
     <MESSAGE value="修复Celery Worker从Redis缓存中读取结构化记忆文本" />
     <MESSAGE value="时空异步伴生体验-WebSocket离线消息推送实现" />
-    <option name="LAST_COMMIT_MESSAGE" value="时空异步伴生体验-WebSocket离线消息推送实现" />
+    <MESSAGE value="时空异步伴生体验-WebSocket离线消息推送实现-消息内容持久化存储" />
+    <MESSAGE value="时空异步伴生体验-WebSocket离线消息推送实现-消息内容持久化存储-AI 自动生成生活日志" />
+    <option name="LAST_COMMIT_MESSAGE" value="时空异步伴生体验-WebSocket离线消息推送实现-消息内容持久化存储-AI 自动生成生活日志" />
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/EchoSoul$voice_companion_demo.coverage" NAME="voice_companion_demo 覆盖结果" MODIFIED="1781156171653" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>

@@ -21,14 +21,14 @@ celery_app.conf.update(
     timezone='Asia/Shanghai',
     enable_utc=True,
     task_track_started=True,
-    task_time_limit=30 * 60,
-    task_soft_time_limit=25 * 60,
+    task_time_limit=30 * 60,             # 单个任务最长执行 30 分钟
+    task_soft_time_limit=25 * 60,        # 一次只取一个任务，避免阻塞
     worker_prefetch_multiplier=1,
     result_expires=3600,
-    task_acks_late=True,
+    task_acks_late=True,                  # 任务执行完才确认，防止丢失
     task_reject_on_worker_lost=True,
     task_annotations={
-        'app.tasks.process_chat': {'rate_limit': '2/s'}
+        'app.tasks.process_chat': {'rate_limit': '2/s'}    # 每秒最多处理 2 个聊天任务
     }
 )
 

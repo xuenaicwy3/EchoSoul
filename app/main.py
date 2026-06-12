@@ -95,16 +95,17 @@ class EchoSoulAPI:
         # -------------------------------
 
         # 启动后处理 Worker（唯一操作记忆的协程，避免多进程竞争）
+        # 启动后台协程，消费 Redis Stream（后处理）
         self.postprocess_task = asyncio.create_task(process_postprocess_stream(self.agent))
         self.scheduler.start()
         logger.info("后台服务已启动")
         yield
+        # 关闭时清理
         self.postprocess_task.cancel()
         self.scheduler.shutdown()
         await close_redis()
         await close_db()
         logger.info("后台服务已关闭")
-
 
 
     # ---------- 路由处理方法（无需装饰器，后续手动注册） ----------
@@ -126,7 +127,8 @@ class EchoSoulAPI:
         1. 预处理用户消息（角色选择等）。
         2. 获取当前角色、好感度信息。
         3. 构造任务负载，发布至 Celery Worker 进行异步 AI 生成。
-        4. 立即返回 task_id，由前端轮询结果。
+        4、构造 task_payload（包含用户消息、角色、好感度等）  发布 Celery 任务
+        5. 立即返回 task_id，由前端轮询结果。
         """
         logger.info("收到异步聊天请求: user=%s, msg=%s", current_user, req.message[:30])
 
@@ -197,7 +199,7 @@ class EchoSoulAPI:
         # ---------- 6. 发布 Celery 任务 ----------
         try:
             # Celery 的 delay 方法直接传递字典，会自动序列化为 JSON
-            celery_task = process_chat.delay(task_payload)
+            celery_task = process_chat.delay(task_payload)  # 将任务扔进 Celery 队列，不等待结果
             logger.info("[chat] Celery 任务已发布: task_id=%s, user=%s", celery_task.id, current_user)
             return {"task_id": celery_task.id}
         except Exception as e:
@@ -452,7 +454,9 @@ class EchoSoulAPI:
                 await websocket.close(code=4001, reason="Authentication failed")
                 return
 
+            # 把该用户的 WebSocket 连接存入全局管理器
             await manager.connect(user_id, websocket)
+            # 保持长连接，接收 ping/pong 保活
             try:
                 while True:
                     data = await websocket.receive_text()

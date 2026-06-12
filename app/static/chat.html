@@ -153,28 +153,42 @@
     // 处理 WebSocket 推送的消息
     function handleWsMessage(data) {
       if (data.type === 'chat_reply') {
-        // 如果该任务 ID 已经被任何方式处理过，直接忽略
-        if (resolvedTasks.has(data.task_id)) {
-          console.log(`WebSocket 消息重复，已忽略 task_id=${data.task_id}`);
-          return;
-        }
+        // 如果任务未被处理过，正常显示
+        if (!resolvedTasks.has(data.task_id)) {
+          resolvedTasks.add(data.task_id);
 
-        // 立即标记为已处理，防止轮询后续拿到同样的任务 ID
-        resolvedTasks.add(data.task_id);
+          if (wsCurrentTaskId === data.task_id) {
+            clearTimeout(wsTimeout);
+            wsCurrentTaskId = null;
+            wsTimeout = null;
+          }
 
-        // 如果正好是当前等待的任务，清除超时计时器
-        if (wsCurrentTaskId === data.task_id) {
-          clearTimeout(wsTimeout);
-          wsCurrentTaskId = null;
-          wsTimeout = null;
-        }
-
-        typingHint.style.setProperty('opacity', '0', 'important');
-        if (data.reply) {
-          addMessage('ai', data.reply, formatTime());
+          typingHint.style.setProperty('opacity', '0', 'important');
+          if (data.reply) {
+            // WebSocket 直接推送时，可能带有音频
+            addMessage('ai', data.reply, formatTime(), data.audio || null);
+          }
+        } else if (data.audio) {
+          // 任务已显示（通常是轮询先到），但当时没有语音，现在补充音频控件
+          appendAudioToLatestAiMessage(data.audio);
         }
       }
-      // 其他类型消息照常处理...
+    }
+
+    // 新增：给最后一条 AI 消息添加音频控件
+    function appendAudioToLatestAiMessage(audioBase64) {
+      const messages = document.querySelectorAll('.message.ai');
+      if (messages.length === 0) return;
+      const lastMsg = messages[messages.length - 1];
+      // 检查是否已有音频控件，避免重复添加
+      if (lastMsg.querySelector('audio')) return;
+
+      const audioId = 'audio-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6);
+      const audioHtml = `<audio id="${audioId}" controls src="data:audio/mp3;base64,${audioBase64}" style="width:100%;margin-top:6px;"></audio>`;
+      const bubble = lastMsg.querySelector('.bubble');
+      if (bubble) {
+        bubble.insertAdjacentHTML('beforeend', audioHtml);
+      }
     }
 
     // 页面加载时尝试连接 WebSocket
@@ -538,15 +552,27 @@
       sendMessage(text);
     }
 
-    function addMessage(type, text, time) {
+    function addMessage(type, text, time, audioBase64 = null) {
       const session = sessions.find(s => s.roleType === activeSessionRole);
       const avatarEmoji = type === 'ai' ? (session?.emoji || '🌸') : '😊';
 
       const msgDiv = document.createElement('div');
       msgDiv.className = `message ${type}`;
+
+      // 构建音频控件 HTML（仅 AI 消息且有音频数据时）
+      let audioHtml = '';
+      if (audioBase64 && type === 'ai') {
+        const audioId = 'audio-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6);
+        audioHtml = `<audio id="${audioId}" controls src="data:audio/mp3;base64,${audioBase64}" style="width:100%;margin-top:6px;"></audio>`;
+      }
+
       msgDiv.innerHTML = `
         <div class="avatar">${avatarEmoji}</div>
-        <div class="bubble"><div>${escapeHtml(text)}</div><div class="time">${time}</div></div>
+        <div class="bubble">
+          <div>${escapeHtml(text)}</div>
+          ${audioHtml}
+          <div class="time">${time}</div>
+        </div>
       `;
       chatArea.appendChild(msgDiv);
       chatArea.scrollTop = chatArea.scrollHeight;

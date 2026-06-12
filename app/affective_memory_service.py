@@ -44,6 +44,7 @@ class AffectiveMemoryService:
 
     # ==================== 事实层 ====================
     async def add_fact(self, user_id: str, role_type: str, key: str, value: str, source: str = "extracted"):
+        # 如果该 key 已存在，更新值；否则插入新记录
         try:
             session = get_async_session()
         except RuntimeError:
@@ -123,6 +124,7 @@ class AffectiveMemoryService:
     # ==================== 情感层 ====================
     async def record_emotion(self, user_id: str, role_type: str,
                              label: str, score: float, message: str = None):
+        # 插入一条 EmotionRecord 到数据库
         try:
             session = get_async_session()
         except RuntimeError:
@@ -138,6 +140,9 @@ class AffectiveMemoryService:
             logger.info(f"情感记录: label={label}, score={score:.2f}, user={user_id[:8]}, role={role_type}")
 
     async def get_emotion_trend(self, user_id: str, role_type: str, limit: int = 30) -> Dict:
+        # 查询最近 limit 条情绪记录
+        # 统计出现最多的情绪作为 dominant_emotion
+        # 比较前一半和后一半的平均强度，判断 trend: "上扬" / "低落" / "平稳"
         try:
             session = get_async_session()
         except RuntimeError:
@@ -181,7 +186,9 @@ class AffectiveMemoryService:
             }
 
     # ==================== 关系层 ====================
+    # 自动生成亲密度里程碑（例如“亲密度达到30”、“成为亲密伙伴”），并定期通过 LLM 将所有信息压缩为一段“用户画像摘要”，用于控制上下文长度。
     async def add_milestone(self, user_id: str, role_type: str, event: str, event_type: str, details: str = None):
+        # 插入一条 RelationshipMilestone 记录
         try:
             session = get_async_session()
         except RuntimeError:
@@ -217,6 +224,8 @@ class AffectiveMemoryService:
 
     async def check_and_add_milestones(self, user_id: str, role_type: str, intimacy: float)-> bool:
         """根据亲密度自动添加里程碑 并返回是否添加了新里程碑"""
+        # 根据当前亲密度（intimacy）判断是否达到阈值（30, 50, 80），如果还没添加过对应里程碑，就添加
+        # 返回值表示是否添加了新里程碑
         milestones = await self.get_milestones(user_id, role_type)
         existing_types = {m['event_type'] for m in milestones}
         added = False
@@ -351,6 +360,10 @@ class AffectiveMemoryService:
                                       milestones: Optional[List[Dict]] = None,
                                       summary: Optional[str] = None):
         """聚合结构化记忆并写入 Redis，支持复用数据, 若文本过长则进行智能压缩"""
+        # 1. 获取事实、情绪趋势、里程碑、用户画像摘要
+        # 2. 拼接成一段文本
+        # 3. 如果文本过长，进行压缩（甚至再用 LLM 压缩）
+        # 4. 写入 Redis key: "structured_memory:{user_id}:{role_type}", 有效期 3600 秒
         if facts is None:
             facts = await self.get_facts(user_id, role_type)
         if trend is None:
@@ -385,9 +398,9 @@ class AffectiveMemoryService:
 
         raw_text = "\n".join(parts)
 
-        # 智能压缩：如果总长度超过阈值，则只保留摘要 + 情感趋势，舍弃详细事实和里程碑
+        # 智能压缩：如果总长度超过阈值，则只保留用户画像摘要 + 情感趋势，舍弃详细事实和里程碑
         if len(raw_text) > MAX_MEMORY_TEXT_LENGTH and summary:
-            # 策略：仅保留摘要和情感趋势，舍弃详细事实列表
+            # 策略：仅保留用户画像摘要和情感趋势，舍弃详细事实列表
             compressed = []
             if trend and trend['records']:
                 recent = ", ".join([f"{r['label']}({r['score']:.1f})" for r in trend['records'][-3:]])

@@ -75,6 +75,7 @@ def process_chat(task_payload: dict) -> dict:
         }
 
     # ========== 正常模式：真实 AI 调用 ==========
+    # 1. 从 task_payload 里取出用户信息、消息、角色、好感度等
     task_id = task_payload.get("task_id")
     user_id = task_payload["user_id"]
     role_type = task_payload["role_type"]
@@ -86,6 +87,7 @@ def process_chat(task_payload: dict) -> dict:
     need_regenerate = task_payload.get("need_regenerate", False)
     regenerate_context = task_payload.get("regenerate_context")
 
+    # 2. 初始化 LangGraph 的状态（state）
     init_state = {
         "user_id": user_id,
         "user_input": user_input,
@@ -100,7 +102,8 @@ def process_chat(task_payload: dict) -> dict:
     }
     config = {"configurable": {"thread_id": thread_id}}
 
-    agent = _build_agent()
+    # 3. 构建 Agent状态图（里面跑 LangGraph 的 4 个节点）
+    agent = _build_agent()  # 单例模式，避免重复创建
 
     # ---- 获取结构化记忆（从 Redis 缓存） ----
     structured_mem = ""
@@ -124,9 +127,11 @@ def process_chat(task_payload: dict) -> dict:
     init_state["memory_text"] = "\n".join([p for p in parts if p])
 
     # 使用同步 invoke，确保检查点正常工作
-    result = agent.invoke(init_state, config)
+    result = agent.invoke(init_state, config)  # 同步调用，内部执行完返回结果
 
     # 推送后处理数据到 Redis Stream（使用同步客户端）
+    # Redis Stream 是一个消息队列，支持多消费者、消息持久化、确认机制（XACK）。这里用它来传递后处理数据。
+    # 4. 任务完成后，不直接写数据库，而是把结果推送到 Redis Stream
     r = redis.Redis.from_url(settings.REDIS_URL)
     postprocess_data = {
         "task_id": current_task.request.id,  # 当前任务 ID
@@ -138,6 +143,7 @@ def process_chat(task_payload: dict) -> dict:
     }
     r.xadd("postprocess_stream", {"data": json.dumps(postprocess_data)})
 
+    # 5. 返回结果给 Celery（前端轮询时会拿到）
     return {
         "reply": result.get("final_response", ""),
         "emotion": result.get("emotion", {}),

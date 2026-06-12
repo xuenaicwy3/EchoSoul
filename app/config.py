@@ -13,7 +13,7 @@ class Settings(BaseSettings):
 
     # ---------- 模型选择 ----------
     LLM_MODEL: str = "deepseek-v4-pro"             # 对话模型
-    EMOTION_MODEL: str = "qwen3.6-plus"            # 情感分析模型
+    EMOTION_MODEL: str = "qwen3.7-plus"            # 情感分析模型
     EMBED_MODEL: str = "text-embedding-v4"         # 向量嵌入模型
 
     # ---------- 服务 ----------
@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     MEMORY_TOP_K: int = 5                          # 检索记忆数量
     SIMILARITY_THRESHOLD: float = 0.15             # 去重相似度阈值
 
+    # ---------- 数据库 ----------
     DATABASE_URL: str = "postgresql+asyncpg://echosoul:123456@localhost:5432//echosoul?ssl=disable"
     REDIS_URL: str = "redis://localhost:6379/0"
 

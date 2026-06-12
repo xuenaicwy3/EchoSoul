@@ -55,8 +55,8 @@ class ProactiveScheduler:
             key = f"user:pending_messages:{user_id}"
             redis = get_redis_client()
             async with redis.pipeline() as pipe:
-                await pipe.lrange(key, 0, -1)
-                await pipe.delete(key)
+                await pipe.lrange(key, 0, -1)   # 获取队列所有消息
+                await pipe.delete(key)               # 获取后清空队列
                 results = await pipe.execute()
                 return results[0] if results else []
         except Exception as e:
@@ -66,6 +66,7 @@ class ProactiveScheduler:
     async def _check_and_generate(self):
         """原有的主动消息扫描 + 新增的离线生活日志生成"""
         redis = get_redis_client()
+        # ---- 第一部分：生成主动消息 ----
         # 扫描不活跃用户并生成主动消息
         cursor = 0
         while True:
@@ -78,6 +79,7 @@ class ProactiveScheduler:
                 if not last_active_str:
                     continue
                 last_active = datetime.fromisoformat(last_active_str)
+                # 如果用户超过 INACTIVE_HOURS 小时未活跃
                 if (datetime.now() - last_active) > timedelta(
                     hours=self.settings.INACTIVE_HOURS
                 ):
@@ -88,6 +90,7 @@ class ProactiveScheduler:
                     role = RoleCatalog.get_role(role_type)
                     aff = await self.affection.get(uid, role_type)
                     avg_aff = sum(aff.values()) / 4
+                    # 调用 LLM 生成主动消息
                     prompt = PromptFactory.proactive_message(role, avg_aff)
                     loop = asyncio.get_running_loop()
                     resp = await loop.run_in_executor(None, self.llm.invoke, prompt)

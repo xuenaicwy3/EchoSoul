@@ -9,6 +9,11 @@ EchoSoul 是一个基于大语言模型的智能陪伴系统，旨在为用户�
 - 💬 轻量部署，快速接入
 
 
+## 🎭 多角色AI伴侣系统
+- ✨ 角色创建中心：用户可从0开始打造专属AI伴侣，自定义名称、性别、性格（外向/内向/幽默/温柔/理性）、MBTI类型、兴趣标签、说话风格、背景故事
+- 📚 预设角色库：提供官方预设角色，分类包括“心灵抚慰型”、“陪伴成长型”、“趣味娱乐型”供快速上手
+- 🌐 角色广场：用户可创建并分享角色给其他用户，形成UGC生态；支持作品展示与下载
+
 ## 🧠 情感记忆系统（核心创新）
 - 📋 事实层：存储基础信息（姓名、生日、喜好、讨厌的事物）
 - 💖 情感层：记录对话的情感标签（开心、难过、焦虑）、情绪变化趋势
@@ -44,6 +49,9 @@ celery -A app.celery_app worker --loglevel=info -P threads
 uvicorn app.main:create_app --factory --host 127.0.0.1 --port 9000 --reload
 
 uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000 --workers 2
+uvicorn app.main:create_app --host 127.0.0.1 --port 8000
+
+uvicorn voice_companion_demo:app --host 127.0.0.1 --port 8000
 
 # 使用清华源安装
 pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
