@@ -3,14 +3,12 @@ from pydantic import BaseModel, Field
 from typing import Literal, Dict, Any, Optional, List, TypedDict
 
 class EmotionResult(BaseModel):
-    """情绪分析的结构化输出"""
+    """情绪分析的结构化输出，标签需与 prompts.emotion_analysis_system 保持同步"""
     label: Literal[
-        "admiration", "amusement", "anger", "annoyance", "approval",
-        "caring", "confusion", "curiosity", "desire", "disappointment",
-        "disapproval", "disgust", "embarrassment", "excitement", "fear",
-        "gratitude", "grief", "joy", "love", "nervousness",
-        "optimism", "pride", "realization", "relief", "remorse",
-        "sadness", "surprise", "neutral"
+        "joy", "sadness", "anger", "fear", "surprise",
+        "love", "gratitude", "loneliness", "anxiety", "boredom",
+        "disappointment", "hope", "envy", "guilt", "confusion",
+        "sarcasm","mockery", "despair", "neutral"
     ] = Field(description="最匹配的情绪标签")
     score: float = Field(ge=0.0, le=1.0, description="置信度分数，0到1之间")
 

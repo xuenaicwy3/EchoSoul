@@ -166,6 +166,7 @@ class MemoryService:
                     mem += f" (当时情绪:{meta['emotion']})"
                 memories.append(mem)
             logger.info("检索到 %d 条记忆", len(memories))
+            logger.info("检索到记忆内容: %s", "\n".join(memories))
             return "\n".join(memories)
         except Exception as e:
             logger.error("记忆检索失败: %s", e)

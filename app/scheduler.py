@@ -9,6 +9,8 @@ from typing import List
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from langchain.chat_models import init_chat_model
+from sqlalchemy.sql.expression import delete
+
 from app.config import Settings
 from app.database import get_async_session
 from app.roles import RoleCatalog
@@ -19,7 +21,7 @@ from app.offline_service import OfflineService
 from app.affective_memory_service import AffectiveMemoryService
 from app.chat_history import ChatHistoryManager
 from sqlalchemy import select, distinct
-from app.models.db_models import ChatHistory as ChatHistoryModel
+from app.models.db_models import ChatHistory as ChatHistoryModel, UserFact, EmotionRecord,RelationshipMilestone
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +50,6 @@ class ProactiveScheduler:
         )
 
 
-
     async def get_pending(self, user_id: str) -> List[str]:
         """获取待推送的主动消息并清空队列"""
         try:
@@ -64,9 +65,9 @@ class ProactiveScheduler:
             return []
 
     async def _check_and_generate(self):
-        """原有的主动消息扫描 + 新增的离线生活日志生成"""
+        """定时任务主入口：主动消息 + 好感度衰减 + 离线日志 + 记忆整理"""
         redis = get_redis_client()
-        # ---- 第一部分：生成主动消息 ----
+        # ---- 1、生成主动消息 ----
         # 扫描不活跃用户并生成主动消息
         cursor = 0
         while True:
@@ -100,7 +101,7 @@ class ProactiveScheduler:
             if cursor == 0:
                 break
 
-        # 好感度衰减（凌晨3点执行，加分布式锁防止多 worker 重复）
+        # --- 2. 好感度衰减（凌晨3点） ---
         now = datetime.now()
         if now.hour == 3 and now.minute < 5:
             lock_key = "affection_decay_lock"
@@ -112,8 +113,12 @@ class ProactiveScheduler:
                 finally:
                     await redis.delete(lock_key)
 
-        # 新增：离线生活日志生成
+        # --- 3. 离线生活日志生成 ---
         await self._generate_offline_life_logs(redis)
+
+        # --- 4. 三层记忆睡眠整理（凌晨3点） ---
+        await self._run_memory_consolidation(redis, now)
+
 
     async def _generate_offline_life_logs(self, redis):
         """为长时间未活动的用户生成生活日志，并推送到离线队列"""
@@ -184,6 +189,53 @@ class ProactiveScheduler:
             if cursor == 0:
                 break
 
+
+    async def _run_memory_consolidation(self, redis, now: datetime):
+        """
+        在凌晨3点执行记忆整理（分布式锁保护）。
+
+        这是一个定时后台任务，负责在系统低峰期（凌晨3点）对全局所有用户的
+        记忆进行统一整理和压缩，包括事实归档、情绪聚合、里程碑压缩等操作。
+        使用 Redis 分布式锁确保在多实例部署下只有一个实例执行该任务，
+        避免重复处理和资源冲突。
+
+        :param redis: Redis 客户端实例（用于分布式锁）
+        :param now: 当前时间（用于判断是否到达执行窗口）
+        """
+        if now.hour != 3 or now.minute >= 5:
+            return
+        lock_key = "memory_consolidation_lock"
+        acquired = await redis.set(lock_key, "1", nx=True, ex=300)
+        if not acquired:
+            return
+        try:
+            logger.info("开始全局记忆睡眠整理...")
+            svc = AffectiveMemoryService(self.settings)
+
+            # ---------- 4. 获取所有需要整理的用户-角色对 ----------
+            # 从三个记忆表中分别查询去重的 (user_id, role_type) 组合，并用 UNION 合并
+            # 确保任何有事实、情绪或里程碑记录的用户都会被纳入整理范围
+            session = get_async_session()
+            async with session() as s:
+                # 合并查询事实表和情绪表中的用户-角色对
+                query = select(distinct(UserFact.user_id), UserFact.role_type).union(
+                    select(distinct(EmotionRecord.user_id), EmotionRecord.role_type)
+                ).union(
+                    select(distinct(RelationshipMilestone.user_id), RelationshipMilestone.role_type)
+                )
+                result = await s.execute(query)
+                pairs = result.all()
+
+                # ---------- 5. 对每个用户-角色对执行记忆整理 ----------
+                for user_id, role_type in pairs:
+                    await svc.memory_consolidation(user_id, role_type)
+            logger.info("全局记忆睡眠整理完成")
+        except Exception as e:
+            logger.error(f"记忆整理失败: {e}", exc_info=True)
+        finally:
+            await redis.delete(lock_key)
+
+
     def start(self):
         self._scheduler.add_job(
             self._check_and_generate,
@@ -195,3 +247,5 @@ class ProactiveScheduler:
 
     def shutdown(self):
         self._scheduler.shutdown()
+
+

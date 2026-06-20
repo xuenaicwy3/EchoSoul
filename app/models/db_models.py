@@ -158,9 +158,18 @@ class UserFact(Base):
     key = Column(String(128), nullable=False)               # 事实类型，如 "name", "birthday", "likes"
     value = Column(Text, nullable=False)                    # 事实内容
     source = Column(String(32), default="extracted")        # extracted / manual
+    # 新增艾宾浩斯遗忘曲线核心字段
+    strength = Column(Float, default=0.6)                     # 记忆强度 0~1
+    salience = Column(Float, default=0.5)                     # 显著性 0~1，越高越难遗忘
+    half_life_days = Column(Integer, default=7)               # 半衰期（天）
+    last_reinforced = Column(DateTime(timezone=True),
+                             server_default=text("(now() AT TIME ZONE 'utc')"))  # 上次强化时间
+    is_immutable = Column(Boolean, default=False)             # 是否硬约束（永不遗忘）
+    status = Column(String(20), default="active")  # active / archived
     created_at = Column(DateTime(timezone=True), server_default=text("(now() AT TIME ZONE 'utc')"))
     updated_at = Column(DateTime(timezone=True), server_default=text("(now() AT TIME ZONE 'utc')"),
                         onupdate=lambda: datetime.now(timezone.utc))
+
 
 class EmotionRecord(Base):
     """情感层：记录每次对话的情感标签与得分"""
@@ -171,7 +180,13 @@ class EmotionRecord(Base):
     label = Column(String(32), nullable=False)              # emotion label
     score = Column(Float, nullable=False)
     message = Column(Text, nullable=True)                   # 用户原话（可选）
+    # 遗忘曲线字段
+    strength = Column(Float, default=1.0)
+    half_life_days = Column(Integer, default=14)
+    last_reinforced = Column(DateTime(timezone=True), server_default=text("(now() AT TIME ZONE 'utc')"))
+    status = Column(String(20), default="active")  # active / archived (归档)
     created_at = Column(DateTime(timezone=True), server_default=text("(now() AT TIME ZONE 'utc')"))
+
 
 class RelationshipMilestone(Base):
     """关系层：记录共同事件、重要时刻、关系里程碑"""
@@ -182,6 +197,11 @@ class RelationshipMilestone(Base):
     event = Column(String(255), nullable=False)             # 事件描述
     event_type = Column(String(32), nullable=False)         # first_chat, intimacy_level, special_moment
     details = Column(Text, nullable=True)
+    # 遗忘曲线字段
+    strength = Column(Float, default=1.0)
+    half_life_days = Column(Integer, default=60)
+    last_reinforced = Column(DateTime(timezone=True), server_default=text("(now() AT TIME ZONE 'utc')"))
+    status = Column(String(20), default="active")  # active / archived
     created_at = Column(DateTime(timezone=True), server_default=text("(now() AT TIME ZONE 'utc')"))
 
 

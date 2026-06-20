@@ -19,19 +19,18 @@ class EmotionService(EmotionAnalyzer):
 
     def __init__(self, settings: Settings):
         logger.info("初始化情绪分析服务，模型=%s", settings.EMOTION_MODEL)
-        # 初始化基础 LLM
         base_llm = init_chat_model(
             model=settings.EMOTION_MODEL,
             model_provider="openai",
             temperature=0.1,
-            max_tokens=60,
+            max_tokens=300,
             api_key=settings.DASHSCOPE_API_KEY,
             base_url=settings.DASHSCOPE_BASE_URL,
             extra_body={"enable_thinking": False}
         )
-        # 绑定结构化输出，强制模型返回符合 EmotionResult 的 JSON
+        # 使用 function_calling 绑定结构化输出
         self.structured_llm = base_llm.with_structured_output(
-            EmotionResult, method="function_calling"
+            EmotionResult, method="function_calling", strict=True
         )
         logger.info("情绪分析服务初始化完成")
 
@@ -54,6 +53,9 @@ class EmotionService(EmotionAnalyzer):
                 SystemMessage(content=PromptFactory.emotion_analysis_system()),
                 HumanMessage(content=PromptFactory.emotion_analysis_user(text))
             ])
+            if result is None:
+                logger.warning("结构化输出为 None，回退为 neutral")
+                return {"label": "neutral", "score": 1.0}
             logger.info("情绪分析完成: label=%s, score=%.2f", result.label, result.score)
             return {"label": result.label, "score": round(result.score, 4)}
         except Exception as e:

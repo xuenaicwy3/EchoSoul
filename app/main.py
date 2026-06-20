@@ -67,7 +67,7 @@ class EchoSoulAPI:
         # ---------- 2. 实例化所有依赖服务（依赖注入） ----------
         self.emotion_service = EmotionService(self.settings)
         self.affection_service = AffectionService()
-        self.memory_service = MemoryService(self.settings)          # 直接创建记忆服务
+        self.memory_service = MemoryService(self.settings)  # 直接创建记忆服务
         self.scheduler = ProactiveScheduler(self.settings, self.affection_service)
 
         # 创建 Agent 时传入真实记忆服务

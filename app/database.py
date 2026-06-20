@@ -133,7 +133,47 @@ async def _create_partitioned_table(conn):
 
 
 async def _ensure_memory_summary_columns(conn):
-    """自动检查并添加 user_memory_summaries 表中可能缺失的列"""
+    """自动检查并添加 user_facts 和 user_memory_summaries 表中可能缺失的列"""
+
+    # ==================== user_facts 表（遗忘曲线字段） ====================
+    fact_columns = {
+        "strength": "FLOAT DEFAULT 0.6",
+        "salience": "FLOAT DEFAULT 0.5",
+        "half_life_days": "INTEGER DEFAULT 7",
+        "last_reinforced": "TIMESTAMPTZ DEFAULT NOW()",
+        "is_immutable": "BOOLEAN DEFAULT FALSE",
+        "status": "VARCHAR(20) DEFAULT 'active'"
+    }
+    for col_name, col_def in fact_columns.items():
+        check_sql = text(f"""
+            SELECT column_name FROM information_schema.columns 
+            WHERE table_name='user_facts' AND column_name='{col_name}'
+        """)
+        result = await conn.execute(check_sql)
+        if not result.fetchone():
+            await conn.execute(text(f"ALTER TABLE user_facts ADD COLUMN {col_name} {col_def}"))
+            logging.info(f"自动添加列 user_facts.{col_name}")
+
+    # 情感层新列
+    emotion_cols = {"strength": "FLOAT DEFAULT 1.0", "half_life_days": "INTEGER DEFAULT 14",
+                    "last_reinforced": "TIMESTAMPTZ DEFAULT NOW()", "status": "VARCHAR(20) DEFAULT 'active'"}
+    for col, col_def in emotion_cols.items():
+        check = text(f"SELECT column_name FROM information_schema.columns WHERE table_name='emotion_records' AND column_name='{col}'")
+        if not (await conn.execute(check)).fetchone():
+            await conn.execute(text(f"ALTER TABLE emotion_records ADD COLUMN {col} {col_def}"))
+            logging.info(f"添加列 emotion_records.{col}")
+
+    # 关系层新列
+    milestone_cols = {"strength": "FLOAT DEFAULT 1.0", "half_life_days": "INTEGER DEFAULT 60",
+                      "last_reinforced": "TIMESTAMPTZ DEFAULT NOW()", "status": "VARCHAR(20) DEFAULT 'active'"}
+    for col, col_def in milestone_cols.items():
+        check = text(f"SELECT column_name FROM information_schema.columns WHERE table_name='relationship_milestones' AND column_name='{col}'")
+        if not (await conn.execute(check)).fetchone():
+            await conn.execute(text(f"ALTER TABLE relationship_milestones ADD COLUMN {col} {col_def}"))
+            logging.info(f"添加列 relationship_milestones.{col}")
+
+
+    # ==================== user_memory_summaries 表（原有检查） ====================
     # 检查 fact_count 列
     check_sql = text("""
         SELECT column_name FROM information_schema.columns 
