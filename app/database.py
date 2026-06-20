@@ -139,6 +139,7 @@ async def _ensure_memory_summary_columns(conn):
     fact_columns = {
         "strength": "FLOAT DEFAULT 0.6",
         "salience": "FLOAT DEFAULT 0.5",
+        "reinforcement_count": "INTEGER DEFAULT 0",
         "half_life_days": "INTEGER DEFAULT 7",
         "last_reinforced": "TIMESTAMPTZ DEFAULT NOW()",
         "is_immutable": "BOOLEAN DEFAULT FALSE",

@@ -25,8 +25,9 @@ class AffectiveMemoryService:
     三层情感记忆服务
     融合艾宾浩斯遗忘曲线、睡眠整理机制，支持记忆休眠与唤醒
     """
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: Settings, vector_memory=None):
         self.settings = settings
+        self.vector_memory = vector_memory  # VectorMemoryService 实例，可选注入
         # 事实提取用轻量模型
         self.extract_llm = init_chat_model(
             model=settings.LLM_MODEL, model_provider="openai",
@@ -64,29 +65,40 @@ class AffectiveMemoryService:
                     UserFact.user_id == user_id, UserFact.role_type == role_type, UserFact.key == key
                 )
             )
+            now = datetime.now(timezone.utc)
             fact = result.scalar_one_or_none()
             if fact:
                 # 强化已有记忆
+                days_since = (now - fact.last_reinforced).total_seconds() / 86400.0
+                old_salience = fact.salience
+                fact.reinforcement_count += 1
+                fact.salience = MemoryDecayEngine.update_salience(
+                    fact.salience, salience, fact.reinforcement_count, days_since
+                )
                 fact.value = value
                 fact.source = source
                 fact.strength = min(1.0, fact.strength * 1.2)
-                fact.last_reinforced = datetime.now(timezone.utc)
-                fact.salience = max(fact.salience, salience)
+                fact.last_reinforced = now
                 fact.half_life_days = max(fact.half_life_days,
                                           MemoryDecayEngine.get_half_life(fact.salience, source))
                 fact.status = "active"
-                logger.info(f"事实强化: {key}={value}")
+                logger.info("事实强化: %s=%s salience:%.3f→%.3f count=%d days=%.1f",
+                            key, value, old_salience, fact.salience, fact.reinforcement_count, days_since)
             else:
                 # 新建事实
                 half_life = MemoryDecayEngine.get_half_life(salience, source)
                 fact = UserFact(
                     user_id=user_id, role_type=role_type, key=key, value=value,
                     source=source, salience=salience, half_life_days=half_life,
-                    strength=0.6, is_immutable=(salience >= 0.9), status="active"
+                    strength=0.6, reinforcement_count=1,
+                    is_immutable=(salience >= 0.9), status="active"
                 )
                 s.add(fact)
-                logger.info(f"事实新增: {key}={value}")
+                logger.info("事实新增: %s=%s salience=%.3f half_life=%d immutable=%s",
+                            key, value, salience, half_life, str(salience >= 0.9))
             await s.commit()
+            if self.vector_memory:
+                self.vector_memory.sync_fact(fact)
             return True
 
     async def get_facts(self, user_id: str, role_type: str) -> List[Dict]:
@@ -114,7 +126,9 @@ class AffectiveMemoryService:
                 if current > 0.15:
                     active.append({
                         "key": f.key, "value": f.value, "source": f.source,
-                        "strength": round(current, 2)
+                        "strength": round(current, 2),
+                        "salience": round(f.salience, 3),
+                        "reinforcement_count": f.reinforcement_count,
                     })
             return active
 
@@ -154,7 +168,10 @@ class AffectiveMemoryService:
             fact.strength = new_strength
             fact.half_life_days = new_half_life
             fact.last_reinforced = now
+            fact.reinforcement_count += 1
             await s.commit()
+            if self.vector_memory:
+                self.vector_memory.sync_fact(fact)
             logger.info(
                 f"事实强化: {key}, 间隔 {days_since:.1f} 天, 强度 {new_strength:.2f}, 半衰期 {new_half_life} 天")
 
@@ -203,6 +220,7 @@ JSON 格式示例: {{"喜好": {{"value": "动画", "salience": 0.8}}}}"""
 
             # ---------- 3. 遍历每个提取出的事实，进行记忆处理 ----------
             async with session() as s:        # 创建数据库异步会话
+                direct_modified: list = []     # 收集被直接修改的 fact 对象（用于后续向量同步）
                 for key, val in data.items():
                     # 处理两种格式：{"key": {"value": "...", "salience": 0.8}} 或 直接 {"key": "..."}
                     if isinstance(val, dict) and 'value' in val:
@@ -226,10 +244,17 @@ JSON 格式示例: {{"喜好": {{"value": "动画", "salience": 0.8}}}}"""
                     if active_fact:
                         # 调用统一的强化方法：强度 × 1.2，半衰期延长 15%（或增加固定天数）
                         await self.reinforce_fact(user_id, role_type, key)
-                        # 同时更新值为最新提取的值（可能内容有变化）
+                        # 更新值 + 基于认知科学的显著性动态调整
                         active_fact.value = value
-                        # 显著性取历史最大值（保留峰值）
-                        active_fact.salience = max(active_fact.salience, salience)
+                        active_fact.reinforcement_count += 1
+                        days_since = (datetime.now(timezone.utc) - active_fact.last_reinforced).total_seconds() / 86400.0
+                        old_salience = active_fact.salience
+                        active_fact.salience = MemoryDecayEngine.update_salience(
+                            active_fact.salience, salience, active_fact.reinforcement_count, days_since
+                        )
+                        logger.info("事实提取-强化: %s=%s salience:%.3f→%.3f count=%d",
+                                    key, value, old_salience, active_fact.salience, active_fact.reinforcement_count)
+                        direct_modified.append(active_fact)
                         continue   # 处理下一个 key
 
                     # ---------- 3.2 未找到活跃事实，尝试唤醒查找归档事实（status = 'archived'） ----------
@@ -241,24 +266,36 @@ JSON 格式示例: {{"喜好": {{"value": "动画", "salience": 0.8}}}}"""
                     )
                     archived_fact = result.scalar_one_or_none()
                     if archived_fact:
-                        # 唤醒归档记忆：将其状态改为 active，重置强度和半衰期（赋予较低的初始值）
+                        now = datetime.now(timezone.utc)
+                        days_since = (now - archived_fact.last_reinforced).total_seconds() / 86400.0
+                        old_salience = archived_fact.salience
+                        # 唤醒归档记忆：状态恢复 active，重置强度和半衰期
                         archived_fact.status = "active"
-                        archived_fact.value = value  # 可能更新为最新值
-                        archived_fact.strength = MemoryDecayEngine.calculate_wake_up_strength() # 唤醒强度 0.4
-                        archived_fact.half_life_days = MemoryDecayEngine.calculate_wake_up_half_life() # 唤醒记忆的半衰期
-                        archived_fact.last_reinforced = datetime.now(timezone.utc)  # 记录唤醒时间
-                        # 显著性仍取历史最大值
-                        archived_fact.salience = max(archived_fact.salience, salience)
-                        logger.info(f"事实唤醒: {key}={value}")
+                        archived_fact.value = value
+                        archived_fact.strength = MemoryDecayEngine.calculate_wake_up_strength()
+                        archived_fact.half_life_days = MemoryDecayEngine.calculate_wake_up_half_life()
+                        archived_fact.last_reinforced = now
+                        archived_fact.reinforcement_count += 1
+                        archived_fact.salience = MemoryDecayEngine.update_salience(
+                            archived_fact.salience, salience, archived_fact.reinforcement_count, days_since
+                        )
+                        logger.info("事实唤醒: %s=%s salience:%.3f→%.3f count=%d days=%.1f",
+                                    key, value, old_salience, archived_fact.salience,
+                                    archived_fact.reinforcement_count, days_since)
+                        direct_modified.append(archived_fact)
                         continue
 
                     # ---------- 3.3 既无活跃也无归档，则新建事实 ----------
                     # 调用 add_fact 方法，初始强度为 0.6（默认），半衰期根据 salience 计算，
-                    # 来源标记为 "extracted"，状态为 "active"
+                    # 来源标记为 "extracted"，状态为 "active"（add_fact 内部已同步向量库）
                     await self.add_fact(user_id, role_type, key, value, "extracted", salience)
 
                 # 循环结束后提交所有更改（包括强化、唤醒、新建）
                 await s.commit()
+                # 同步被直接修改的事实到向量数据库
+                if self.vector_memory and direct_modified:
+                    for f in direct_modified:
+                        self.vector_memory.sync_fact(f)
 
         except Exception as e:
             logger.error(f"事实提取失败: {e}")
@@ -304,7 +341,8 @@ JSON 格式示例: {{"喜好": {{"value": "动画", "salience": 0.8}}}}"""
             )
             s.add(record)           # 添加到会话，暂未提交
             await s.commit()        # 先立即提交，确保记录持久化（后续更新可基于此ID）
-
+            if self.vector_memory:
+                self.vector_memory.sync_emotion(record)
 
             # ---------- 2. 关联强化24小时内同标签记录 ----------
             # 为什么是24小时？因为情绪具有短期集中性，例如用户连续表达“愤怒”时，这些记录应互相增强，
@@ -326,20 +364,26 @@ JSON 格式示例: {{"喜好": {{"value": "动画", "salience": 0.8}}}}"""
                     EmotionRecord.last_reinforced >= week_ago    # 且最后强化时间在7天内（表示近期仍有一定活跃度）
                 )
             )
+            awakened_records = []
             for rec in result.scalars().all():
                 # 唤醒操作：状态恢复为 active
                 rec.status = "active"
-                # 强度重置为0.3（低于新记录的1.0，也低于正常初始值0.6），表示“已经遗忘一部分，但仍有痕迹”
+                # 强度重置为0.3（低于新记录的1.0，也低于正常初始值0.6），表示”已经遗忘一部分，但仍有痕迹”
                 rec.strength = 0.3
                 # 半衰期设为7天，比新记录的14天短，表明唤醒后的记忆如果不进一步强化，会较快再次遗忘
                 rec.half_life_days = 7
                 # 更新最后强化时间为现在，作为新的衰减起点
                 rec.last_reinforced = now
+                awakened_records.append(rec)
                 logger.info(f"情绪记忆唤醒: {label}")
 
             # 提交所有变更（新记录、强化更新、唤醒更新）
             await s.commit()
-            logger.info(f"情感记录: {label} ({score:.2f})")
+            if self.vector_memory and awakened_records:
+                for r in awakened_records:
+                    self.vector_memory.sync_emotion(r)
+            logger.info("情感记录完成: label=%s score=%.2f awakened=%d 已同步向量库=%s",
+                        label, score, len(awakened_records), bool(self.vector_memory))
 
     async def get_emotion_trend(self, user_id: str, role_type: str, limit: int = 30) -> Dict:
         """
@@ -444,6 +488,8 @@ JSON 格式示例: {{"喜好": {{"value": "动画", "salience": 0.8}}}}"""
             )
             s.add(milestone)   # 添加到会话
             await s.commit()   # 提交事务，持久化到数据库
+            if self.vector_memory:
+                self.vector_memory.sync_milestone(milestone)
             logger.info(f"里程碑: {event}")
 
     async def get_milestones(self, user_id: str, role_type: str) -> List[Dict]:
@@ -525,6 +571,7 @@ JSON 格式示例: {{"喜好": {{"value": "动画", "salience": 0.8}}}}"""
             )
             records = result.scalars().all()
 
+            modified_records = []
             for rec in records:
                 # 跳过刚刚创建的那条记录（它的 last_reinforced 就是当前时间，间隔为0）
                 if rec.last_reinforced == now:
@@ -547,13 +594,16 @@ JSON 格式示例: {{"喜好": {{"value": "动画", "salience": 0.8}}}}"""
                 # 更新记录
                 rec.strength = new_strength
                 rec.half_life_days = new_half_life
-                # 更新最后强化时间
                 rec.last_reinforced = now
+                modified_records.append(rec)
                 logger.info(
                     f"情绪强化: {label}, 间隔 {minutes_since:.1f} 分钟, 强度 {rec.strength:.2f}"
                 )
 
             await s.commit()
+            if self.vector_memory and modified_records:
+                for r in modified_records:
+                    self.vector_memory.sync_emotion(r)
 
 
     async def reinforce_milestone(self, user_id: str, role_type: str, event_type: str):
@@ -603,6 +653,8 @@ JSON 格式示例: {{"喜好": {{"value": "动画", "salience": 0.8}}}}"""
             milestone.half_life_days = new_half_life
             milestone.last_reinforced = now
             await s.commit()
+            if self.vector_memory:
+                self.vector_memory.sync_milestone(milestone)
             logger.info(
                 f"里程碑强化: {event_type}, 间隔 {days_since:.1f} 天, 强度 {new_strength:.2f}, 半衰期 {new_half_life} 天")
 
@@ -658,6 +710,7 @@ JSON 格式示例: {{"喜好": {{"value": "动画", "salience": 0.8}}}}"""
                     RelationshipMilestone.event_type.in_(["intimacy_30", "intimacy_50", "intimacy_80"])
                 )
             )
+            awakened_milestones = []
             # 遍历每个归档里程碑
             for m in result.scalars().all():
                 # 从 event_type 中提取阈值数字（例如 "intimacy_50" -> 50）
@@ -670,9 +723,13 @@ JSON 格式示例: {{"喜好": {{"value": "动画", "salience": 0.8}}}}"""
                     m.strength = 0.5         # 唤醒强度设为0.5（中等偏低）
                     m.half_life_days = 30    # 唤醒后半衰期为30天（比初始值可能更长，表现关系里程碑的持久性）
                     m.last_reinforced = datetime.now(timezone.utc)   # 更新最后强化时间
+                    awakened_milestones.append(m)
                     logger.info(f"里程碑唤醒: {m.event}")
             # 提交所有变更
             await s.commit()
+            if self.vector_memory and awakened_milestones:
+                for m in awakened_milestones:
+                    self.vector_memory.sync_milestone(m)
         return added
 
     # ==================== 记忆摘要 ====================
@@ -857,9 +914,15 @@ JSON 格式示例: {{"喜好": {{"value": "动画", "salience": 0.8}}}}"""
         # ---------- 阶段二：显著性过滤 ----------
         # 只保留高显著性（≥0.7）或高强度（>0.8）的事实
         important_facts = [f for f in facts if f.get('salience', 0) >= 0.7 or f.get('strength', 0) > 0.8]
+        logger.info("显著性过滤: 筛选前=%d 筛选后=%d (阈值: salience≥0.7 或 strength>0.8)",
+                    len(facts), len(important_facts))
+        for f in important_facts:
+            logger.info("  保留事实: %s=%s salience=%.3f strength=%.2f count=%d",
+                        f['key'], f['value'], f.get('salience', 0), f.get('strength', 0), f.get('reinforcement_count', 0))
         # 若没有符合条件的事实，则退而求其次，按强度排序取强度最高的 1 条（至少保留一点信息）
         if not important_facts:
             important_facts = sorted(facts, key=lambda f: f.get('strength', 0), reverse=True)[:1]
+            logger.info("显著性过滤-降级: 无高显著性事实，保留强度最高1条")
         # 用筛选后的事实重新构建文本（情绪和里程碑保持不变）
         filtered_text = self._build_raw_text(important_facts, trend, milestones, summary)
         if len(filtered_text) <= MAX_MEMORY_TEXT_LENGTH:
@@ -903,6 +966,11 @@ JSON 格式示例: {{"喜好": {{"value": "动画", "salience": 0.8}}}}"""
         # ---------- 1. 事实部分 ----------
         if facts:
             # 将每个事实格式化为 "- key: value" 的形式，并换行连接
+            logger.info("_build_raw_text: 事实=%d 条", len(facts))
+            for f in facts:
+                logger.info("  事实: %s=%s salience=%.3f strength=%.2f count=%d",
+                            f['key'], f['value'], f.get('salience', 0),
+                            f.get('strength', 0), f.get('reinforcement_count', 0))
             parts.append("关于用户的已知信息：\n" + "\n".join([f"- {f['key']}: {f['value']}" for f in facts]))
 
         # ---------- 2. 情绪趋势部分 ----------
@@ -1060,6 +1128,8 @@ JSON 格式示例: {{"喜好": {{"value": "动画", "salience": 0.8}}}}"""
                         days_since,
                         fact.is_immutable
                 ):
+                    if self.vector_memory:
+                        self.vector_memory.delete_fact(fact.id)
                     await s.delete(fact)
                     logger.info(f"垃圾事实已删除: {fact.key}")
 
@@ -1068,6 +1138,8 @@ JSON 格式示例: {{"喜好": {{"value": "动画", "salience": 0.8}}}}"""
                 # 条件：强度在 [0.05, 0.15) 之间（中等偏低）且显著性 >= 0.4（有一定重要性）。
                 elif MemoryDecayEngine.should_archive_fact(current_strength, fact.salience):
                     fact.status = "archived"        # 状态改为归档，不再参与活跃查询
+                    if self.vector_memory:
+                        self.vector_memory.delete_fact(fact.id)
                     logger.info(f"事实已归档: {fact.key}")
 
             # 提交所有变更（删除和更新）
@@ -1123,6 +1195,8 @@ JSON 格式示例: {{"喜好": {{"value": "动画", "salience": 0.8}}}}"""
                 # should_prune_emotion 条件：强度 < 0.03 且 超过90天 且 连续性计数 < 3
                 # 这意味着：极低强度、过期、且不是持续出现的情绪，视为一次性情绪，可以直接删除
                 if MemoryDecayEngine.should_prune_emotion(current_strength, days_since, count):
+                    if self.vector_memory:
+                        self.vector_memory.delete_emotion(rec.id)
                     await s.delete(rec)
                     logger.info(f"一次性情绪已修剪: {rec.label}")
 
@@ -1131,6 +1205,8 @@ JSON 格式示例: {{"喜好": {{"value": "动画", "salience": 0.8}}}}"""
                 # 归档意味着保留记录但不再参与活跃查询，以备将来可能唤醒
                 elif MemoryDecayEngine.should_archive_emotion(current_strength, days_since):
                     rec.status = "archived"
+                    if self.vector_memory:
+                        self.vector_memory.delete_emotion(rec.id)
                     logger.info(f"陈旧情绪已归档: {rec.label}")
 
             await s.commit()
@@ -1177,23 +1253,33 @@ JSON 格式示例: {{"喜好": {{"value": "动画", "salience": 0.8}}}}"""
                         to_archive.append(m)
 
             # 2. 归档：将满足归档条件但未达压缩阈值的 active 记录转为 archived
+            #    同时从向量库删除（归档记忆不应出现在检索结果中，唤醒后会重新同步）
             if to_archive:
                 for m in to_archive:
                     m.status = "archived"
+                    if self.vector_memory:
+                        self.vector_memory.delete_milestone(m.id)
                 logger.info(f"归档了{len(to_archive)}条里程碑。")
 
             # 3. 压缩：删除满足压缩条件的记录并生成摘要
+            new_summary = None
             if to_compress:
                 summary_text = "；".join([m.event for m in to_compress])
                 for m in to_compress:
+                    if self.vector_memory:
+                        self.vector_memory.delete_milestone(m.id)
                     await s.delete(m)
 
-                s.add(RelationshipMilestone(
+                new_summary = RelationshipMilestone(
                     user_id=user_id, role_type=role_type,
                     event=f"早期里程碑: {summary_text}",
                     event_type="summary",
                     strength=0.3, half_life_days=60, status="active"
-                ))
+                )
+                s.add(new_summary)
                 logger.info(f"压缩并生成了新的摘要里程碑，共{len(to_compress)}条。")
 
             await s.commit()
+            # 同步新生成的摘要里程碑到向量库
+            if self.vector_memory and new_summary:
+                self.vector_memory.sync_milestone(new_summary)

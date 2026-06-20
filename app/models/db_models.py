@@ -161,6 +161,7 @@ class UserFact(Base):
     # 新增艾宾浩斯遗忘曲线核心字段
     strength = Column(Float, default=0.6)                     # 记忆强度 0~1
     salience = Column(Float, default=0.5)                     # 显著性 0~1，越高越难遗忘
+    reinforcement_count = Column(Integer, default=0)          # 强化次数（驱动显著性动态变化）
     half_life_days = Column(Integer, default=7)               # 半衰期（天）
     last_reinforced = Column(DateTime(timezone=True),
                              server_default=text("(now() AT TIME ZONE 'utc')"))  # 上次强化时间

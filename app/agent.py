@@ -18,6 +18,7 @@ from app.roles import RoleCatalog
 from app.prompts import PromptFactory
 from app.emotions import EmotionService
 from app.memory import MemoryService
+from app.vector_memory_service import VectorMemoryService
 from app.affection import AffectionService
 from app.models.schemas import AgentState
 from langchain_core.runnables import RunnableConfig
@@ -55,7 +56,8 @@ class EchoSoulAgent:
         self.emotion_svc = emotion_svc
         self.affection_svc = affection_svc or AffectionService()
         self.memory_svc = memory_svc          # 直接保存真实服务
-        self.affective_memory_svc = AffectiveMemoryService(settings)
+        self.vector_memory_svc = VectorMemoryService(settings)  # 三层向量记忆服务
+        self.affective_memory_svc = AffectiveMemoryService(settings, self.vector_memory_svc)
 
         # 检查点
         self.checkpointer = checkpointer or MemorySaver()
@@ -124,6 +126,40 @@ class EchoSoulAgent:
 
     def _memory_node(self, state: AgentState) -> AgentState:
         # 结构化记忆和语义记忆已在 tasks.py 中注入 init_state["memory_text"]，此处无需额外操作
+        user_msg = state.get("user_input", "")
+        if not user_msg or user_msg.startswith("[ROLE_SELECT]") or self.settings.TEST_MODE:
+            return state
+
+        user_id = state.get("user_id", "")
+        role_type = state.get("role_type", "")
+        if not user_id or not role_type:
+            return state
+
+        try:
+            # 获取会话轮数（深度对话触发 LLM 兜底 / 多层检索）
+            try:
+                rounds = asyncio.run(self.chat_history.count_rounds(user_id, role_type))
+            except Exception:
+                rounds = 0  # 降级：深度感知不生效，规则路由正常工作
+
+            layers = self.vector_memory_svc.smart_retrieve(user_id, role_type, user_msg, rounds)
+            vector_text = VectorMemoryService.format_layers_for_prompt(layers)
+            if not vector_text and rounds > 0:
+                # 安全网：路由检索无结果时，退回全量检索兜底
+                logger.info("路由检索无命中，退回全量检索兜底: user=%s rounds=%d", user_id, rounds)
+                layers = self.vector_memory_svc.retrieve_all_layers(user_id, role_type, user_msg)
+                vector_text = VectorMemoryService.format_layers_for_prompt(layers)
+
+            if vector_text:
+                existing = state.get("memory_text", "")
+                logger.info("向量检索注入: 原=%d + 新=%d = %d chars rounds=%d",
+                            len(existing), len(vector_text), len(existing) + len(vector_text), rounds)
+                state["memory_text"] = (existing + "\n\n" + vector_text) if existing else vector_text
+            else:
+                logger.info("向量检索无命中(含兜底): user=%s query=%s rounds=%d",
+                            user_id, user_msg[:50], rounds)
+        except Exception as e:
+            logger.error("向量检索失败(已降级): %s", e)
         return state
 
 

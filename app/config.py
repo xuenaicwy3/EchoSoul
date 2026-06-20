@@ -25,9 +25,17 @@ class Settings(BaseSettings):
 
     # ---------- 记忆模块 ----------
     CHROMA_PATH: str = "./chroma_data"             # 向量数据库持久化路径
-    COLLECTION_NAME: str = "companion_memories_v4"    # 集合名称
+    COLLECTION_NAME: str = "companion_memories_v4"    # 对话记忆集合名称
     MEMORY_TOP_K: int = 5                          # 检索记忆数量
     SIMILARITY_THRESHOLD: float = 0.15             # 去重相似度阈值
+
+    # ---------- 三层情感记忆向量化 ----------
+    VECTOR_FACTS_COL: str = "memory_facts"              # 事实层 Chroma 集合
+    VECTOR_EMOTIONS_COL: str = "memory_emotions"         # 情感层 Chroma 集合
+    VECTOR_MILESTONES_COL: str = "memory_milestones"     # 关系层 Chroma 集合
+    VECTOR_TOP_K_FACTS: int = 3       # 事实层检索条数
+    VECTOR_TOP_K_EMOTIONS: int = 5    # 情感层检索条数
+    VECTOR_TOP_K_MILESTONES: int = 3  # 关系层检索条数
 
     # ---------- 数据库 ----------
     DATABASE_URL: str = "postgresql+asyncpg://echosoul:123456@localhost:5432//echosoul?ssl=disable"

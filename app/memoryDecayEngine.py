@@ -168,6 +168,50 @@ class MemoryDecayEngine:
         return strength < 0.05 and salience < 0.4 and days_since > 30
 
     @staticmethod
+    def update_salience(current_salience: float, llm_salience: float,
+                        reinforcement_count: int, days_since: float) -> float:
+        """
+        基于认知心理学原理更新信息显著性（salience）。
+        S_new = (0.8×S_current + 0.2×S_LLM + 0.02×ln(1+N)) × 2^(-days/730)
+         ───────────────   ──────────────   ───────────────
+         锚定-调整(EMA)    间隔效应增益      显著性衰减(半衰期2年)
+
+
+        理论基石：
+        1. 锚定-调整启发式 (Tversky & Kahneman, 1974)：
+           首次评估形成锚点，后续调整缓慢。EMA权重：当前值0.8，LLM新评估0.2。
+        2. 间隔效应 (Ebbinghaus, 1885; Cepeda et al., 2006)：
+           每次成功提取微量增强显著性（~0.02/次，对数递减增益）。
+        3. 语义记忆持久性 (Tulving, 1972)：
+           语义信息（salience）比情景细节（strength）衰退慢100倍。
+           强度半衰期：3-14天 → 显著性半衰期：730天（约2年）。
+        4. 残余激活保护 (Anderson, 1983)：
+           最低显著性0.05，确保信息永不从语义网络中彻底消失。
+
+        :param current_salience: 当前显著性 (0~1)
+        :param llm_salience: LLM最新评估的显著性 (0~1)
+        :param reinforcement_count: 累计强化次数
+        :param days_since: 距上次强化天数
+        :return: 更新后的显著性 (0.05~1.0)
+        """
+        # 1. EMA 混合：锚定-调整，LLM每次评估提供20%的修正力  EMA α=0.2
+        blended = 0.8 * current_salience + 0.2 * llm_salience
+
+        # 2. 强化增益：log(1+N) 模拟间隔效应的边际递减
+        #    1次→0.014, 5次→0.036, 20次→0.061, 100次→0.092
+        reinforcement_bonus = 0.02 * math.log1p(reinforcement_count)
+
+        # 3. 显著性衰减：半衰期730天，比强度衰减慢100倍
+        if days_since > 0:
+            decay = math.pow(2, -days_since / 730.0)
+        else:
+            decay = 1.0
+
+        # 4. 合成并截断
+        new_salience = (blended + reinforcement_bonus) * decay
+        return max(0.05, min(1.0, new_salience))
+
+    @staticmethod
     def get_half_life(salience: float, source: str = "conversation") -> int:
         """
         根据显著性（salience）信息的重要程度和来源类型计算事实层的半衰期（天）

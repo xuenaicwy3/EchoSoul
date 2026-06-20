@@ -1,7 +1,7 @@
 import logging
 from typing import List, Dict
 from zoneinfo import ZoneInfo
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, func
 from app.database import get_async_session
 from app.models.db_models import ChatHistory as ChatHistoryModel
 from datetime import datetime, timezone
@@ -46,6 +46,20 @@ class ChatHistoryManager:
             history = [row.to_dict() for row in rows]
             logger.info("加载聊天历史: user=%s, role=%s, 共 %d 条", user_id[:8], role_type, len(history))
             return history
+
+    @classmethod
+    async def count_rounds(cls, user_id: str, role_type: str) -> int:
+        """统计该用户-角色组合的用户消息条数（即对话轮数）"""
+        async_session = get_async_session()
+        async with async_session() as session:
+            result = await session.execute(
+                select(func.count()).where(
+                    ChatHistoryModel.user_id == user_id,
+                    ChatHistoryModel.role_type == role_type,
+                    ChatHistoryModel.sender == "user"
+                )
+            )
+            return result.scalar() or 0
 
     @classmethod
     async def delete_history(self, user_id: str, role_type: str):
