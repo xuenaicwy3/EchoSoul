@@ -4,17 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="386caada-63df-470c-a0c1-925864ae15ee" name="更改" comment="基于艾宾浩斯遗忘曲线与突触可塑性理论的记忆衰减引擎以及&#10;基于认知神经科学共识的精确记忆强化引擎">
-      <change afterPath="$PROJECT_DIR$/app/vector_memory_service.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/affective_memory_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/affective_memory_service.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/chat_history.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/chat_history.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/database.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/memoryDecayEngine.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/memoryDecayEngine.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/models/db_models.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/db_models.py" afterDir="false" />
-    </list>
+    <list default="true" id="386caada-63df-470c-a0c1-925864ae15ee" name="更改" comment="将三层情感记忆系统迁移到向量数据库中" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -277,7 +267,7 @@
       <workItem from="1781856329667" duration="1718000" />
       <workItem from="1781859195619" duration="432000" />
       <workItem from="1781860000085" duration="9560000" />
-      <workItem from="1781928922839" duration="31270000" />
+      <workItem from="1781928922839" duration="32018000" />
     </task>
     <task id="LOCAL-00001" summary="项目初始化">
       <option name="closed" value="true" />
@@ -375,7 +365,15 @@
       <option name="project" value="LOCAL" />
       <updated>1781956229463</updated>
     </task>
-    <option name="localTasksCounter" value="13" />
+    <task id="LOCAL-00013" summary="将三层情感记忆系统迁移到向量数据库中">
+      <option name="closed" value="true" />
+      <created>1781968402274</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1781968402274</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -405,7 +403,8 @@
     <MESSAGE value="实现多虚拟角色语音合成功能测试案例" />
     <MESSAGE value="调用阿里云语音大模型实现多虚拟角色以不同的音色回复语音内容" />
     <MESSAGE value="基于艾宾浩斯遗忘曲线与突触可塑性理论的记忆衰减引擎以及&#10;基于认知神经科学共识的精确记忆强化引擎" />
-    <option name="LAST_COMMIT_MESSAGE" value="基于艾宾浩斯遗忘曲线与突触可塑性理论的记忆衰减引擎以及&#10;基于认知神经科学共识的精确记忆强化引擎" />
+    <MESSAGE value="将三层情感记忆系统迁移到向量数据库中" />
+    <option name="LAST_COMMIT_MESSAGE" value="将三层情感记忆系统迁移到向量数据库中" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/EchoSoul$voice_companion_demo.coverage" NAME="voice_companion_demo 覆盖结果" MODIFIED="1781252805798" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />

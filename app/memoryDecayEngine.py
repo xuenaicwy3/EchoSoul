@@ -59,7 +59,7 @@ class MemoryDecayEngine:
         # 结果截断在 [0.0, 1.0] 范围内，防止浮点误差或异常值
         return max(0.0, min(1.0, decayed))
 
-
+    # ==================== 强化计算 ===================
     @staticmethod
     def calculate_reinforcement(minutes_since: float, current_strength: float,
                                 base_half_life: int,
@@ -70,11 +70,11 @@ class MemoryDecayEngine:
         强化计算：冷却期内使用微增益策略，冷却期外使用完整的间隔自适应强化。
         返回值: (new_strength, new_half_life)
 
-        :param minutes_since: 距上次真正强化的间隔 (分钟)
+        :param minutes_since: 距上次真正强化的间隔 (Δt分钟)
         :param current_strength: 当前记忆强度 (0~1)
         :param base_half_life: 当前半衰期 (天)
         :param cooldown_minutes: 冷却期（分钟），默认为 MemoryDecayEngine.COOLDOWN_MINUTES (15分钟)
-        :param epsilon: 冷却期微增益系数，默认 0.005（事实/关系层），情感层可设为 0.01
+        :param epsilon: 冷却期微增益系数（ε），默认 0.005（事实/关系层），情感层可设为 0.01
         :return: (new_strength, new_half_life)
         """
 
@@ -83,17 +83,12 @@ class MemoryDecayEngine:
 
         # ---------- 1. 冷却期微增益策略 ----------
         if minutes_since < cooldown_minutes:
-            # 增益 = 1 + ε / (Δt + 1)，其中ε = 0.005
+            # 微量增益公式 = 1 + ε / (Δt + 1)，其中ε = 0.005
             # 增益随间隔增大而迅速递减，模拟突触响应性下降
             micro_gain = 1.0 + epsilon / (minutes_since + 1.0)
             new_strength = min(1.0, current_strength * micro_gain)
             # 冷却期内半衰期不变
             return new_strength, base_half_life
-
-        # ---------- 1. 冷却期保护 ----------
-        # # 15分钟内的再次提及，属于工作记忆复述或早期不稳定巩固，不累加强化。
-        # if not MemoryDecayEngine.should_reinforce(minutes_since):
-        #     return current_strength, base_half_life
 
         # ---------- 2. 提取努力度计算 (基于艾宾浩斯数据) ----------
         # 艾宾浩斯(1885)实验数据记录了不同间隔后的遗忘量：
@@ -110,38 +105,47 @@ class MemoryDecayEngine:
         dt = max(0.0, minutes_since / 1440.0)  # 转换为天
         # days = minutes_since / 1440.0
 
-        # 长期平稳增益 (对数)
+        # 长期平稳增益 (对数函数) 对数项G-log：模拟天到年级的缓慢增长。
+        # G-log = α * ln(1 + dt), 其中 α = 0.15
         time_gain_log = MemoryDecayEngine.ALPHA_TIME * math.log1p(dt)
 
-        # 初期急剧增益 (双曲线，半饱和点约在1小时)
+        # 初期急剧增益 (双曲线，半饱和点约在1小时) 双曲线项 G-hyper：模拟分钟到小时级的急剧变化。
+        # G-hyper = β * (Δt / (Δt + 60)), 其中 β = 0.4
+        # 分母 Δt + 60 使半饱和点恰好定在60分钟————这正是艾宾浩斯观察到的“1小时后遗忘约56%”的关键，拐点。参数 β=0.4 控制早期收益的上限。
         time_gain_hyper = MemoryDecayEngine.BETA_TIME * (minutes_since / (minutes_since + 60.0))
 
         # 总时间增益 = 对数 + 双曲线，完美拟合艾宾浩斯遗忘曲线
+        # G-time = G-log + G-hyper
         time_gain = time_gain_log + time_gain_hyper
 
         # ---------- 3. 提取难度贡献 (提取努力假说) ----------
         # 认知心理学经典发现：提取越困难，成功后的巩固越强 (Bjork, 1994)。
         # 当前强度越低，说明衰减越严重，提取所需的认知努力就越大。
         # 使用 (1-S)^2 是为了放大低强度记忆的巩固效果，帮助其快速恢复。
+        # G-difficulty = γ * (1 - S)^2, 其中 γ = 0.5
         difficulty_gain = MemoryDecayEngine.GAMMA_DIFFICULTY * (1.0 - current_strength) ** 2
 
-        # ---------- 4. 睡眠巩固加成 ----------
+        # ---------- 4. 睡眠巩固加成 B_sleep----------
         # 睡眠依赖的记忆巩固 (Stickgold, 2005)：
         # 如果提取发生在学习后的第一个夜晚之后（>12小时），记忆已得到睡眠的初步整理，
         # 此时的成功提取意味着记忆更稳固，应给予微小加成。
+        # 分段函数：B_sleep = 0.05, if minutes_since > 720
+        #                   0,     otherwise
         sleep_bonus = 0.0
         if minutes_since > 720:  # 超过12小时，可能经历了一次睡眠
             sleep_bonus = 0.05
 
-        # ---------- 5. 总强化倍数 ----------
+        # ---------- 5. 总强化倍数 M----------
+        # M-total = 1 + G-time + G-difficulty + B_sleep
         multiplier = 1.0 + time_gain + difficulty_gain + sleep_bonus
         multiplier = min(multiplier, MemoryDecayEngine.MAX_GAIN)
 
         # ---------- 6. 新强度 ----------
+        # S-new = min(1, S ✖ M-total)
         new_strength = min(1.0, current_strength * multiplier)
 
         # ---------- 7. 半衰期更新 ----------
-        # 半衰期延长幅度为强度增幅的80%。
+        # 半衰期延长幅度为强度增幅部分的80%。
         # 科学依据：提取后的记忆衰退速度会变慢，但半衰期的增长不应快于强度的增长。
         half_life_mult = 1.0 + 0.8 * max(0, (multiplier - 1.0))
         new_half_life = min(36500, int(base_half_life * half_life_mult))
