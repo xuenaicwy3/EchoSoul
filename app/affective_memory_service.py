@@ -160,9 +160,9 @@ class AffectiveMemoryService:
                 fact.strength, days_since, fact.half_life_days
             )
 
-            # 调用统一的强化方法（内部根据冷却期自动选择微增益或完整强化）
             new_strength, new_half_life = MemoryDecayEngine.calculate_reinforcement(
-                minutes_since, current_strength, fact.half_life_days
+                minutes_since, current_strength, fact.half_life_days,
+
             )
 
             fact.strength = new_strength

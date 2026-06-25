@@ -1,6 +1,10 @@
 import uuid
 from sqlalchemy import Column, String
-from app.database import Base
+
+from app.models.db_models import Base
+
+
+# from app.database import Base
 
 def generate_uuid():
     return str(uuid.uuid4())

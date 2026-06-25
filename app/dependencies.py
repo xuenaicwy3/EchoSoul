@@ -1,22 +1,5 @@
-"""认证依赖"""
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
-from app.auth import decode_access_token
-from fastapi import WebSocket, Query, Depends
-from fastapi.exceptions import HTTPException
-
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
-
-
-async def get_current_user(token: str = Depends(oauth2_scheme)) -> str:
-    user_id = decode_access_token(token)
-    if user_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="无效的认证凭据",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    return user_id
-
-
+"""
+桥接模块 — 所有导入已迁移到 app.api.deps。
+保留此文件仅用于向后兼容。
+"""
+from app.api.deps import get_current_user, oauth2_scheme, auth_deps  # noqa: F401

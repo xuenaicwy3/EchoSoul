@@ -18,7 +18,7 @@ from app.roles import RoleCatalog
 from app.prompts import PromptFactory
 from app.emotions import EmotionService
 from app.memory import MemoryService
-from app.vector_memory_service import VectorMemoryService
+from app.vector_memory_service import VectorMemoryService, _SHARED_EXECUTOR
 from app.affection import AffectionService
 from app.models.schemas import AgentState
 from langchain_core.runnables import RunnableConfig
@@ -136,12 +136,15 @@ class EchoSoulAgent:
             return state
 
         try:
+            # ---- 按需同步：三层集合若为空则从 PG 加载一次 ----
+            self._ensure_memory_loaded(user_id, role_type)
+
             # 获取会话轮数（深度对话触发 LLM 兜底 / 多层检索）
             try:
                 rounds = asyncio.run(self.chat_history.count_rounds(user_id, role_type))
             except Exception:
                 rounds = 0  # 降级：深度感知不生效，规则路由正常工作
-
+            # 智能向量检索
             layers = self.vector_memory_svc.smart_retrieve(user_id, role_type, user_msg, rounds)
             vector_text = VectorMemoryService.format_layers_for_prompt(layers)
             if not vector_text and rounds > 0:
@@ -162,6 +165,17 @@ class EchoSoulAgent:
             logger.error("向量检索失败(已降级): %s", e)
         return state
 
+    def _ensure_memory_loaded(self, user_id: str, role_type: str):
+        vms = self.vector_memory_svc
+        if vms.facts_col.count() == 0 or vms.emotions_col.count() == 0 or vms.milestones_col.count() == 0:
+            logger.info("向量记忆缺失，触发全量同步: user=%s role=%s", user_id, role_type)
+            try:
+                # asyncio.run 会创建新事件循环，安全执行异步同步
+                counts = asyncio.run(vms.sync_all_layers(user_id, role_type))
+                logger.info("全量同步完成: facts=%d emotions=%d milestones=%d",
+                            counts["facts"], counts["emotions"], counts["milestones"])
+            except Exception as e:
+                logger.error("全量同步失败: %s", e)
 
     def _generate_node(self, state: AgentState) -> AgentState:
         # 测试模式下直接返回固定回复
