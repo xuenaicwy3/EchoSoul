@@ -1,85 +1,14 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>心流 · 虚拟伴侣</title>
-  <link rel="stylesheet" href="/static/style.css">
-</head>
-<body>
-  <!-- ========== 登录/注册视图 ========== -->
-  <div id="authView" class="view active">
-    <div class="auth-container">
-      <div class="auth-card">
-        <h1 class="auth-title">💞 心流 EchoSoul</h1>
-        <p class="auth-subtitle" id="authSubtitle">登录你的账号</p>
-        <div class="auth-error" id="authError" style="display:none;"></div>
-        <div class="auth-form">
-          <input type="text" id="authUsername" placeholder="用户名" />
-          <input type="password" id="authPassword" placeholder="密码" />
-          <button id="authSubmitBtn">登 录</button>
-        </div>
-        <div class="auth-toggle">
-          <span id="authToggleText">还没有账号？</span>
-          <a href="#" id="authToggleLink">立即注册</a>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ========== 首页视图（角色卡片） ========== -->
-  <div id="homeView" class="view">
-    <div class="home-container">
-      <h1 class="home-title">✨ AI 虚拟陪伴 ✨</h1>
-      <p class="home-subtitle">选择一位角色，开启属于你们的温暖对话</p>
-      <div class="role-cards">
-        <div class="role-card" data-role="日系动漫型"><div class="card-avatar avatar-sakura">🌸</div><div class="card-info"><div class="card-name">🌸 小樱</div><div class="card-desc">二次元少女，精通动漫</div></div></div>
-        <div class="role-card" data-role="高冷御姐型"><div class="card-avatar avatar-yukino">❄️</div><div class="card-info"><div class="card-name">❄️ 雪乃</div><div class="card-desc">成熟冷静的职场精英</div></div></div>
-        <div class="role-card" data-role="傲娇辣妹型"><div class="card-avatar avatar-rin">💢</div><div class="card-info"><div class="card-name">💢 凛</div><div class="card-desc">嘴硬心软的傲娇少女</div></div></div>
-        <div class="role-card" data-role="甜美校花型"><div class="card-avatar avatar-tiantian">🍬</div><div class="card-info"><div class="card-name">🍬 甜甜</div><div class="card-desc">温柔甜美的校园女神</div></div></div>
-        <div class="role-card" data-role="软萌可爱型"><div class="card-avatar avatar-dango">🍡</div><div class="card-info"><div class="card-name">🍡 团子</div><div class="card-desc">软萌胆小的小可爱</div></div></div>
-        <div class="role-card" data-role="温柔贤淑型"><div class="card-avatar avatar-ruolan">🌿</div><div class="card-info"><div class="card-name">🌿 若兰</div><div class="card-desc">大姐姐般温柔体贴</div></div></div>
-        <div class="role-card" data-role="元气少女型"><div class="card-avatar avatar-genki">☀️</div><div class="card-info"><div class="card-name">☀️ 葵</div><div class="card-desc">永远充满活力的阳光少女</div></div></div>
-        <div class="role-card" data-role="清冷仙气型"><div class="card-avatar avatar-seisen">🌙</div><div class="card-info"><div class="card-name">🌙 清歌</div><div class="card-desc">如月光般清冷的仙女</div></div></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ========== 聊天视图 ========== -->
-  <div id="chatView" class="view">
-    <div class="app-container">
-      <aside class="sidebar">
-        <div class="sidebar-header">
-          <button id="backBtn" class="back-btn">← 返回</button>
-          <h2>💞 心流</h2>
-        </div>
-        <div class="add-role-area">
-          <div class="custom-select-wrapper">
-            <div class="custom-select" id="customSelect">
-              <span id="customSelectText">+ 选择角色</span>
-              <span class="arrow">▾</span>
-            </div>
-            <div class="custom-options" id="customOptions"></div>
-          </div>
-          <button id="addRoleBtn" title="添加会话">＋</button>
-        </div>
-        <div class="session-list" id="sessionList"></div>
-        <div class="sidebar-footer"><small>点击会话切换，×删除</small></div>
-      </aside>
-      <main class="chat-main">
-        <div class="chat-header">
-          <span class="active-role-name">选择一个会话开始聊天</span>
-          <span class="typing-hint" id="typingHint">对方正在输入...</span>
-        </div>
-        <div class="chat-area" id="chatArea"></div>
-        <div class="input-area">
-          <input type="text" id="userInput" placeholder="说点什么吧..." autofocus />
-          <button id="sendBtn">发送</button>
-        </div>
-      </main>
-    </div>
-  </div>
-
-  <script src="/static/script.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EchoSoul — 心流虚拟伴侣</title>
+    <script type="module" crossorigin src="/assets/index-q7O1Gj61.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-mbVxH1L7.css">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js"></script>
+  </body>
 </html>

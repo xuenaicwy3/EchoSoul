@@ -241,6 +241,7 @@ class MemoryDecayEngine:
     # ================================================================
     # 函数 2：计算记忆强化（复习）
     # ================================================================
+
     @staticmethod
     def calculate_reinforcement(
             minutes_since: float,

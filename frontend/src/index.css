@@ -1,0 +1,335 @@
+/* ========== 复制原始 style.css 全部内容 ========== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: linear-gradient(135deg, #ffd6e0 0%, #ffb3c6 100%);
+  height: 100vh;
+  overflow: hidden;
+}
+#root { height: 100%; width: 100%; }
+
+/* ========== 登录/注册 ========== */
+.auth-container { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+.auth-card {
+  background: #fff; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  padding: 40px 30px; width: 360px; text-align: center;
+}
+.auth-title { font-size: 2rem; color: #b56576; margin-bottom: 8px; text-shadow: 0 2px 12px rgba(181,101,118,0.3); letter-spacing: 2px; }
+.auth-subtitle { color: #888; margin-bottom: 25px; font-size: 0.9rem; }
+.auth-error { background: #ffe0e0; color: #c0392b; padding: 10px; border-radius: 8px; margin-bottom: 15px; font-size: 0.85rem; }
+.auth-form input {
+  width: 100%; padding: 12px 15px; margin-bottom: 15px; border: 1px solid #f08080;
+  border-radius: 12px; font-size: 1rem; outline: none; transition: box-shadow 0.2s;
+}
+.auth-form input:focus { box-shadow: 0 0 0 3px rgba(240,128,128,0.3); }
+.auth-form button {
+  width: 100%; padding: 12px; background: #e5989b; color: white; border: none;
+  border-radius: 12px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.2s;
+}
+.auth-form button:hover { background: #d16b7e; }
+.auth-form button:disabled { background: #f0a0a5; cursor: not-allowed; }
+.auth-toggle { margin-top: 15px; color: #999; font-size: 0.85rem; }
+.auth-toggle a { color: #b56576; text-decoration: none; font-weight: 600; }
+
+/* ========== 首页 ========== */
+.home-container { text-align: center; width: 100%; height: 100%; padding: 40px 20px; overflow-y: auto; }
+.home-header { position: absolute; top: 20px; right: 20px; display: flex; align-items: center; gap: 16px; color: #888; font-size: 0.9rem; }
+.home-header button { background: none; border: none; color: #b56576; font-size: 0.9rem; cursor: pointer; font-weight: 600; }
+.home-title { font-size: 3rem; color: #b56576; margin-bottom: 10px; text-shadow: 0 2px 12px rgba(181,101,118,0.3); letter-spacing: 2px; }
+.home-subtitle { font-size: 1.2rem; color: #666; margin-bottom: 50px; font-weight: 300; }
+.role-cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 30px; max-width: 960px; margin: 0 auto; padding-bottom: 40px; }
+.role-card { width: 200px; background: #fff; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.3s, box-shadow 0.3s; overflow: hidden; display: flex; flex-direction: column; align-items: center; }
+.role-card:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
+.role-card.selected { box-shadow: 0 20px 40px rgba(181,101,118,0.35), 0 0 0 3px #b56576; transform: translateY(-8px); }
+.card-avatar { width: 100%; height: 200px; display: flex; align-items: center; justify-content: center; font-size: 5rem; }
+.avatar-sakura  { background: linear-gradient(135deg, #ffd9e6, #ffb7c5); }
+.avatar-yukino  { background: linear-gradient(135deg, #e0d4f5, #c9b8e8); }
+.avatar-rin     { background: linear-gradient(135deg, #ffe0cc, #ffc8a2); }
+.avatar-tiantian{ background: linear-gradient(135deg, #fff0d4, #ffe1a8); }
+.avatar-dango   { background: linear-gradient(135deg, #d4f0f0, #b3e0e0); }
+.avatar-ruolan  { background: linear-gradient(135deg, #d9e8d9, #c2d9c2); }
+.avatar-genki   { background: linear-gradient(135deg, #ffe8d6, #ffd1b3); }
+.avatar-seisen  { background: linear-gradient(135deg, #e6d9f2, #d4c4e8); }
+.card-info { padding: 18px 15px; text-align: center; background: #fff; width: 100%; }
+.card-name { font-size: 1.3rem; font-weight: 700; color: #4a2545; margin-bottom: 6px; }
+.card-desc { font-size: 0.85rem; color: #999; }
+.enter-btn {
+  display: inline-block; margin-top: 20px; padding: 12px 32px; border-radius: 12px;
+  font-size: 1rem; font-weight: 600; color: white; background: #e5989b; border: none; cursor: pointer; transition: background 0.2s;
+}
+.enter-btn:hover { background: #d16b7e; }
+.enter-btn:disabled { background: #ccc; cursor: not-allowed; }
+.home-nav { margin-top: 24px; display: flex; justify-content: center; gap: 24px; }
+.home-nav a { color: #b56576; font-size: 0.9rem; font-weight: 600; text-decoration: none; }
+
+/* ========== 聊天界面 ========== */
+.app-container { display: flex; width: 100%; height: 100%; background: linear-gradient(135deg, #ffd6e0 0%, #ffb3c6 100%); }
+.sidebar { width: 280px; background: #fff0f2; border-right: 1px solid #fcd5ce; display: flex; flex-direction: column; }
+.sidebar-header { padding: 15px; border-bottom: 1px solid #fcd5ce; display: flex; align-items: center; gap: 10px; }
+.back-btn { background: none; border: none; color: #b56576; font-size: 0.9rem; cursor: pointer; font-weight: 600; }
+.back-btn:hover { color: #d16b7e; }
+.sidebar-header h2 { font-size: 1.1rem; color: #b56576; font-weight: 600; flex: 1; }
+.role-select-area { padding: 12px 15px; border-bottom: 1px solid #fcd5ce; display: flex; gap: 8px; background: #fff0f2; }
+.custom-select-wrapper { position: relative; flex: 1; }
+.custom-select {
+  width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #f08080;
+  background: #fff; color: #b56576; font-size: 0.9rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: space-between; user-select: none;
+}
+.custom-select:hover { border-color: #e5989b; }
+.custom-select .arrow { margin-left: 8px; transition: transform 0.2s; font-size: 0.7rem; }
+.custom-select.open .arrow { transform: rotate(180deg); }
+.custom-options {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #fff;
+  border: 1px solid #f08080; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  z-index: 100; max-height: 200px; overflow-y: auto; display: none;
+}
+.custom-options.show { display: block; }
+.custom-option { padding: 10px 12px; cursor: pointer; color: #b56576; font-size: 0.9rem; transition: background 0.15s; }
+.custom-option:hover { background: #f8c8dc; }
+.custom-option.selected { background: #f8c8dc; font-weight: 600; }
+.role-select-area button {
+  background: #e5989b; color: white; border: none; border-radius: 8px; width: 36px; font-size: 1.2rem; cursor: pointer;
+}
+.role-select-area button:hover { background: #d16b7e; }
+.session-list { flex: 1; overflow-y: auto; padding: 10px; background: #fff0f2; }
+.session-item {
+  padding: 10px 12px; border-radius: 12px; margin-bottom: 6px; cursor: pointer;
+  background: #fff; border: 2px solid transparent; display: flex; align-items: center; gap: 10px; transition: all 0.2s; user-select: none;
+}
+.session-item:hover { background: #ffe5d9; }
+.session-item.active { border-color: #e5989b; background: #fce4ec; }
+.session-avatar { width: 32px; height: 32px; border-radius: 50%; background: #ffe1e6; display: flex; align-items: center; justify-content: center; font-size: 1rem; flex-shrink: 0; color: #b56576; }
+.session-info { flex: 1; overflow: hidden; }
+.session-name { font-weight: 600; color: #4a2545; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.delete-session { background: none; border: none; color: #ccc; font-size: 1.2rem; cursor: pointer; padding: 0 5px; line-height: 1; transition: color 0.2s; }
+.delete-session:hover { color: #e5989b; }
+.session-list::-webkit-scrollbar { width: 6px; }
+.session-list::-webkit-scrollbar-thumb { background: #f8c8dc; border-radius: 3px; }
+.sidebar-nav { display: flex; gap: 4px; padding: 12px 15px; border-top: 1px solid #fcd5ce; }
+.sidebar-nav button { background: none; border: none; color: #b56576; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+
+/* ========== 聊天消息 ========== */
+.chat-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.chat-area { flex: 1; overflow-y: auto; padding: 25px 20px; background: #fff5f5; display: flex; flex-direction: column; gap: 16px; }
+.chat-area::-webkit-scrollbar { width: 6px; }
+.chat-area::-webkit-scrollbar-thumb { background: #f8c8dc; border-radius: 3px; }
+.chat-empty { display: flex; height: 100%; align-items: center; justify-content: center; color: #b56576; font-size: 1.1rem; }
+.message { display: flex; align-items: flex-end; gap: 10px; animation: fadeIn 0.3s; }
+.message.ai { justify-content: flex-start; }
+.message.user { justify-content: flex-end; }
+.bubble { max-width: 70%; padding: 14px 18px; border-radius: 22px; font-size: 1rem; line-height: 1.5; word-break: break-word; }
+.ai .bubble { background: #fce4ec; color: #4a2545; border-bottom-left-radius: 6px; }
+.user .bubble { background: #f8d5e0; color: #2e1b2e; border-bottom-right-radius: 6px; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.msg-loading { display: flex; gap: 6px; padding: 10px 16px; }
+.msg-loading span { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #e5989b; animation: bounce 1.4s infinite ease-in-out both; }
+.msg-loading span:nth-child(1) { animation-delay: -0.32s; }
+.msg-loading span:nth-child(2) { animation-delay: -0.16s; }
+@keyframes bounce {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}
+
+/* ========== 输入框 ========== */
+.chat-input-area { display: flex; align-items: flex-end; gap: 8px; padding: 12px 16px; border-top: 1px solid #fcd5ce; background: rgba(255,255,255,0.8); }
+.chat-input-area textarea {
+  flex: 1; resize: none; max-height: 120px; padding: 10px 16px; border: 1px solid #f08080;
+  border-radius: 12px; font-size: 0.9rem; outline: none; background: #fef5f7; font-family: inherit;
+  transition: box-shadow 0.2s;
+}
+.chat-input-area textarea:focus { box-shadow: 0 0 0 3px rgba(240,128,128,0.25); }
+.chat-input-area button {
+  flex-shrink: 0; padding: 10px 20px; border-radius: 12px; border: none;
+  background: #e5989b; color: white; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: background 0.2s;
+}
+.chat-input-area button:hover { background: #d16b7e; }
+.chat-input-area button:disabled { background: #ccc; cursor: not-allowed; }
+
+/* ========== Live2D 悬浮窗 ========== */
+.live2d-float {
+  position: fixed; z-index: 1000; width: 420px;
+  background: rgba(255,255,255,0.92); backdrop-filter: blur(8px);
+  border-radius: 12px; box-shadow: 0 8px 32px rgba(233,30,99,0.2);
+  user-select: none; overflow: hidden;
+}
+.live2d-float-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 10px; background: #fff0f2; font-size: 0.75rem;
+  color: #b56576; font-weight: 600; cursor: grab;
+}
+.live2d-float-bar button {
+  background: none; border: none; color: #b56576; font-size: 1rem; cursor: pointer; padding: 0 4px; line-height: 1;
+}
+.live2d-float-bar button:hover { color: #d16b7e; }
+.live2d-float-error {
+  width: 420px; height: 420px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 12px;
+  color: #b56576; font-size: 1.1rem; font-weight: 600;
+}
+.live2d-float-error .emoji { font-size: 5rem; }
+.live2d-float-error .hint { font-size: 0.8rem; color: #999; font-weight: 400; }
+.live2d-float-mini {
+  position: fixed; bottom: 20px; right: 20px; z-index: 1000;
+  width: 44px; height: 44px; border-radius: 50%;
+  background: rgba(255,255,255,0.9); box-shadow: 0 4px 12px rgba(233,30,99,0.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.2rem; cursor: pointer; transition: transform 0.2s;
+}
+.live2d-float-mini:hover { transform: scale(1.1); }
+
+/* ========== 其他页面 ========== */
+.page-container { display: flex; width: 100%; height: 100%; flex-direction: column; align-items: center; justify-content: center; }
+.page-card {
+  background: #fff; border-radius: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  padding: 32px 40px; text-align: center;
+}
+.page-card h2 { font-size: 1.5rem; color: #b56576; margin-bottom: 16px; font-weight: 700; }
+.page-card p { color: #999; font-size: 0.9rem; margin-bottom: 24px; }
+.page-card button {
+  padding: 10px 24px; border-radius: 12px; border: none;
+  background: #e5989b; color: white; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: background 0.2s;
+}
+.page-card button:hover { background: #d16b7e; }
+
+/* ========== 游戏中心 ========== */
+.game-page {
+  min-height: 100vh; background: linear-gradient(135deg, #ffd6e0 0%, #fff0f5 50%, #fce4ec 100%);
+  display: flex; justify-content: center; align-items: center; font-family: "Microsoft YaHei", sans-serif;
+}
+.game-container {
+  background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); border-radius: 24px;
+  box-shadow: 0 20px 40px rgba(233, 30, 99, 0.15); padding: 2.5rem;
+  width: 90%; max-width: 680px; max-height: 90vh; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 2rem; box-sizing: border-box;
+}
+.game-container h3 { color: #d63384; font-size: 1.3rem; margin: 0 0 0.8rem 0; border-bottom: 2px dashed #f8bbd0; padding-bottom: 0.4rem; }
+.game-container .level-badge { background: #e91e63; color: #fff; font-size: 0.75rem; padding: 2px 8px; border-radius: 10px; margin-left: 8px; }
+.affection-status p { margin: 0.3rem 0; font-size: 1rem; color: #555; }
+.affection-status span { font-weight: bold; color: #e91e63; }
+.daily-tasks ul, .achievements ul { list-style: none; padding: 0; }
+.daily-tasks li, .achievements li {
+  background: #fff5f9; border-radius: 12px; padding: 0.7rem 1rem; margin-bottom: 0.6rem;
+  display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
+.daily-tasks .empty-li, .achievements .empty-li, .skins .empty-text { color: #999; font-size: 0.9rem; padding: 1rem; text-align: center; }
+.daily-tasks button, .skin-card button {
+  background: #e91e63; color: white; border: none; padding: 0.3rem 1rem; border-radius: 20px; cursor: pointer; font-size: 0.85rem; transition: background 0.2s;
+}
+.daily-tasks button:hover, .skin-card button:hover { background: #c2185b; }
+.achievements .progress-text { font-size: 0.8rem; color: #888; min-width: 60px; text-align: right; }
+.achievements progress { width: 100px; height: 10px; border-radius: 10px; accent-color: #e91e63; }
+.skin-gallery { display: flex; flex-wrap: wrap; gap: 0.8rem; }
+.skin-card {
+  background: #fff5f9; border-radius: 16px; padding: 1rem; flex: 1 1 140px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
+.skin-card.equipped { border: 2px solid #e91e63; }
+.skin-card .skin-desc { font-size: 0.8rem; color: #999; }
+.skin-card .equipped-tag { color: #e91e63; font-size: 0.85rem; font-weight: 600; }
+.back-link { text-align: center; margin-top: 0.5rem; }
+.back-link a { color: #d81b60; text-decoration: none; font-weight: 500; }
+.back-link a:hover { text-decoration: underline; }
+
+/* ========== 故事工坊 ========== */
+.story-app {
+  width: 95%; max-width: 900px; max-height: 90vh;
+  background: rgba(255,255,255,0.85); backdrop-filter: blur(12px); border-radius: 24px;
+  box-shadow: 0 20px 40px rgba(233,30,99,0.15);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.story-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 15px 25px; background: #fff0f2; border-bottom: 1px solid #fcd5ce; flex-shrink: 0;
+}
+.story-header a { color: #b56576; text-decoration: none; font-weight: 600; font-size: 0.9rem; }
+.story-header a:hover { color: #d16b7e; }
+.story-header h1 { font-size: 1.4rem; color: #b56576; font-weight: 600; }
+.story-header .header-placeholder { width: 60px; }
+.story-view-active {
+  flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 20px;
+}
+.starters-grid {
+  display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;
+}
+.starter-card {
+  flex: 1 1 250px; max-width: 280px; background: #fff5f9; border-radius: 16px; padding: 20px;
+  cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;
+  border: 2px solid transparent; display: flex; flex-direction: column; align-items: center; text-align: center;
+}
+.starter-card:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(233,30,99,0.15); border-color: #e5989b; }
+.starter-card .category {
+  display: inline-block; background: #f8c8dc; color: #b56576; padding: 4px 12px; border-radius: 12px; font-size: 0.75rem; margin-bottom: 10px;
+}
+.starter-card h3 { color: #d63384; font-size: 1.1rem; margin-bottom: 8px; }
+.starter-card p { color: #666; font-size: 0.9rem; line-height: 1.5; flex: 1; }
+/* 故事进行中 */
+.story-view-active.story-playing {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 0;
+}
+.story-messages {
+  flex: 1; overflow-y: auto; padding: 10px 20px; margin-bottom: 8px;
+  scrollbar-width: thin; scrollbar-color: #f8c8dc transparent;
+}
+.story-messages::-webkit-scrollbar { width: 6px; }
+.story-messages::-webkit-scrollbar-thumb { background: #f8c8dc; border-radius: 3px; }
+.story-msg {
+  margin-bottom: 18px; animation: storyFadeIn 0.3s; max-width: 100%;
+}
+.story-msg .label { font-weight: 600; color: #b56576; margin-bottom: 4px; font-size: 0.8rem; }
+.story-msg .text {
+  background: #fce4ec; padding: 14px 18px; border-radius: 16px; line-height: 1.7; color: #4a2545;
+}
+.story-msg.user_action { text-align: right; }
+.story-msg.user_action .label { color: #6d5d64; }
+.story-msg.user_action .text { background: #f0f0f0; }
+@keyframes storyFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+/* 骨架屏 */
+.loading-skeleton { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+.skeleton-line { height: 16px; background: linear-gradient(90deg, #fce4ec 25%, #fff0f2 50%, #fce4ec 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px; }
+.skeleton-line.long { width: 90%; } .skeleton-line.medium { width: 70%; } .skeleton-line.short { width: 50%; }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+/* 选项区 */
+.story-suggestions {
+  display: flex; flex-direction: column; gap: 8px; padding: 0 20px; margin-bottom: 8px; flex-shrink: 0;
+}
+.suggestion-btn {
+  background: #e5989b; color: white; border: none; padding: 10px 16px; border-radius: 20px;
+  font-size: 0.9rem; cursor: pointer; transition: background 0.2s; text-align: left;
+}
+.suggestion-btn:hover { background: #d16b7e; }
+.suggestion-btn:disabled { background: #ccc; cursor: not-allowed; }
+/* 自由输入 */
+.story-free-input { display: flex; gap: 8px; padding: 0 20px; margin-bottom: 8px; flex-shrink: 0; }
+.story-free-input input {
+  flex: 1; padding: 10px 15px; border-radius: 20px; border: 1px solid #fcd5ce;
+  background: #fff; font-size: 0.9rem; outline: none;
+}
+.story-free-input input:focus { border-color: #e5989b; box-shadow: 0 0 0 3px rgba(233,30,99,0.15); }
+.btn-send { background: #e5989b; color: white; border: none; padding: 10px 18px; border-radius: 20px; font-size: 0.9rem; cursor: pointer; }
+.btn-send:hover { background: #d16b7e; }
+/* 操作按钮 */
+.btn-auto {
+  background: linear-gradient(135deg, #f8c8dc, #e5989b); color: white; border: none; padding: 10px 20px;
+  border-radius: 20px; font-size: 0.9rem; cursor: pointer; margin: 0 20px 8px; flex-shrink: 0; transition: opacity 0.2s;
+}
+.btn-auto:hover { opacity: 0.9; }
+.btn-auto:disabled { opacity: 0.5; cursor: not-allowed; }
+.story-actions {
+  display: flex; justify-content: center; gap: 15px; padding: 10px 0 15px; flex-shrink: 0;
+  border-top: 1px solid #fcd5ce; background: rgba(255,255,255,0.6);
+}
+.btn-secondary {
+  background: #f8c8dc; color: #b56576; border: none; padding: 8px 18px; border-radius: 20px;
+  font-size: 0.85rem; cursor: pointer; transition: background 0.2s;
+}
+.btn-secondary:hover { background: #f08080; color: white; }
+.btn-danger:hover { background: #e53935; color: white; }
+.btn-back { background: #f0f0f0; color: #b56576; border: none; padding: 8px 18px; border-radius: 20px; font-size: 0.85rem; cursor: pointer; margin: 0 20px 15px; flex-shrink: 0; }
+/* 回放 */
+.replay-container { flex: 1; overflow-y: auto; padding: 10px 20px; }
+/* 骨架屏（全局覆盖） */
+.skeleton-line { height: 12px; background: #f0e0e5; border-radius: 6px; animation: shimmer 1.5s infinite; }
+.skeleton-line.long { width: 100%; }
+.skeleton-line.medium { width: 65%; }
+.skeleton-line.short { width: 40%; }
+@keyframes shimmer { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }

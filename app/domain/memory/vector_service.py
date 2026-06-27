@@ -190,6 +190,9 @@ class ExternalAPIClient:
 
             # ---- 2.3 退避等待（最后一次失败后不等待） ----
             # 如果不是最后一次尝试，则在重试前等待一段时间
+            # 退避策略：指数增长 + 随机抖动
+            # - 基础延迟base乘以(乘数 ** 重试次数)，实现指数级退避。
+            # - 在此基础上加入随机抖动，避免多个客户端同时重试造成“惊群效应”。
             if attempt < total_attempts - 1:
                 # 根据当前重试次数计算退避延迟（通常带随机抖动）
                 delay = self._backoff_delay(attempt)
@@ -240,7 +243,7 @@ _FACT_SIGNALS = [ # 静态属性关键词
 _EMOTION_SIGNALS = [ # 情感维度关键词
     "感觉", "心情", "开心", "难过", "生气", "害怕", "焦虑", "兴奋",
     "无聊", "失落", "情绪", "好累", "很烦", "想哭", "感动", "紧张",
-    "期待", "失望", "后悔", "孤独", "想念","哈哈","加油","伤心"
+    "期待", "失望", "后悔", "孤独", "想念","哈哈","加油","伤心",
 ]
 _MILESTONE_SIGNALS = [ # 关系历史关键词
     "记得", "上次", "以前", "曾经", "一起", "第一次", "那天", "当时",
@@ -400,6 +403,9 @@ class MemoryRetrievalRouter:
         }
         """
         # 1. 锚点向量是每个记忆层的参考嵌入，用于计算语义相似度。
+        # "facts": "用户个人信息 姓名 年龄 喜好 职业 属性 特征", 静态属性
+        # "emotions": "用户心情 情绪 感受 感觉 心理状态 情感",   情感维度
+        # "milestones": "共同经历 回忆 关系发展 纪念日 事件 约定", 关系维度
         self._ensure_anchors() # 延迟初始化锚点向量
 
         # 2. 计算关键词命中得分（0.0 ~ 1.0）
@@ -840,6 +846,7 @@ class VectorMemoryService:
         metadatas = []
         for f in facts:
             ids.append(f"fact_{f.id}")
+            # 事实层嵌入文本：'用户的{key喜好}是{value}
             documents.append(self._fact_text(f.key, f.value))
             metadatas.append({
                 "user_id": f.user_id, "role_type": f.role_type,

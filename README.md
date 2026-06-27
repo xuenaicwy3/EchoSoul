@@ -53,6 +53,8 @@ uvicorn app.main:create_app --host 127.0.0.1 --port 8000
 
 uvicorn voice_companion_demo:app --host 127.0.0.1 --port 8000
 
+$env:CHROMA_SERVER_AUTHN_PROVIDER=""; chroma run --path ./chroma_data
+
 # 使用清华源安装
 pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 
@@ -62,7 +64,17 @@ pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/
 
 New-Item -Path . -Name ".gitignore" -ItemType File -Value ".env`n"
 
+以后只需：
 
+方式 1 — Makefile（推荐）：
+make chroma    # 替代每次手输那一长串
+
+方式 2 — PowerShell 一行：
+$env:CHROMA_SERVER_AUTHN_PROVIDER=""; chroma run --path ./chroma_data
+
+方式 3 — 根治（降级 chromadb，一劳永逸）：
+pip install chromadb==0.5.23
+这个版本没有鉴权，和之前正常工作的一样。
 
 # 整体架构图
 

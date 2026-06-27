@@ -16,7 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from app.api.deps import auth_deps
 from app.api.middleware import register_middleware
 from app.api.error_handlers import register_error_handlers
-from app.api.routers import chat, ws
+from app.api.routers import chat, ws, voice
 from app.core.config import get_settings
 from app.core.logging_config import setup_logging
 from app.infrastructure.database import init_db, close_db
@@ -87,45 +87,43 @@ def create_app() -> FastAPI:
 
     # WebSocket 路由
     app.include_router(ws.router)
+    app.include_router(voice.router)
 
-    # ---- 页面路由（无需认证） ----
-    @app.get("/login")
-    async def login_page():
-        return FileResponse(str(_static_dir / "login.html"))
-
-    @app.get("/register")
-    async def register_page():
-        return FileResponse(str(_static_dir / "register.html"))
-
-    @app.get("/home")
-    async def home_page():
-        return FileResponse(str(_static_dir / "home.html"))
-
-    @app.get("/chat")
-    async def chat_page():
-        return FileResponse(str(_static_dir / "chat.html"))
-
-    @app.get("/game")
-    async def game_page():
-        return FileResponse(str(_static_dir / "game.html"))
-
-    @app.get("/story_page")
-    async def story_page():
-        return FileResponse(str(_static_dir / "story.html"))
-
-    @app.get("/")
-    async def root():
-        return FileResponse(str(_static_dir / "login.html"))
-
-    # ---- 旧路由兼容（逐步迁移到独立 router） ----
+    # ---- 旧路由兼容 ----
     from app.routers import auth_router, game_router, story_router, affective_memory_router
     app.include_router(auth_router.router)
     app.include_router(game_router.router, dependencies=auth_deps)
     app.include_router(story_router.router, dependencies=auth_deps)
     app.include_router(affective_memory_router.router, dependencies=auth_deps)
 
-    # 静态文件挂载
-    app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
+    # ---- SPA: API 路由之后，所有剩余路径返回 React index.html ----
+    _index_html = _static_dir / "index.html"
+    if not _index_html.exists():
+        logger.warning("React build 未找到！请先执行: cd frontend && npm run build")
+
+    if _index_html.exists():
+        # 静态资源
+        if (_static_dir / "assets").exists():
+            app.mount("/assets", StaticFiles(directory=str(_static_dir / "assets")), name="assets")
+
+        # Live2D 模型文件
+        if (_static_dir / "live2d").exists():
+            app.mount("/live2d", StaticFiles(directory=str(_static_dir / "live2d")), name="live2d")
+
+        # 所有前端页面路由 → 返回 React index.html
+        spa = lambda: FileResponse(str(_index_html))
+        app.add_api_route("/", spa, methods=["GET"], include_in_schema=False)
+        app.add_api_route("/login", spa, methods=["GET"], include_in_schema=False)
+        app.add_api_route("/register", spa, methods=["GET"], include_in_schema=False)
+        app.add_api_route("/home", spa, methods=["GET"], include_in_schema=False)
+        app.add_api_route("/chat", spa, methods=["GET"], include_in_schema=False)
+        app.add_api_route("/game", spa, methods=["GET"], include_in_schema=False)
+        app.add_api_route("/story", spa, methods=["GET"], include_in_schema=False)
+        app.add_api_route("/memory", spa, methods=["GET"], include_in_schema=False)
+    else:
+        @app.get("/", include_in_schema=False)
+        async def root():
+            return FileResponse(str(_static_dir / "login.html"))
 
     logger.info("FastAPI 应用构建完成")
     return app

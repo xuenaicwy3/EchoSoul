@@ -2,6 +2,7 @@
 ChromaDB 客户端封装。
 
 统一管理三层向量集合的创建和访问。
+当前仅用于 get_vector_collections()，不替代旧 memory.py 和 vector_service.py 的自主连接。
 """
 import logging
 from typing import Tuple
@@ -13,7 +14,6 @@ from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-# 模块级客户端缓存
 _client: HttpClient | None = None
 _collections: Tuple[Collection, Collection, Collection] | None = None
 
