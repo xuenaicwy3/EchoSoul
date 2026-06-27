@@ -1,3 +1,14 @@
+# CLAUDE.md
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## 配置说明
+- `.claude/settings.local.json` — 本地权限配置（allow/deny 规则）
+- `.claude/settings.json` — 项目级共享配置
+- `CLAUDE.md`（全局，位于 `~\.claude\`）— 用户级行为指令
+- `claude.md`（本文件）— 项目级 Claude Code 指引
+
+---
+
 # EchoSoul — 心流虚拟伴侣
 
 > 基于 LangGraph + 三层情感记忆 + Live2D 二次元形象的 AI 虚拟伴侣对话系统
