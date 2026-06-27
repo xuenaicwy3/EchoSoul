@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > 基于 LangGraph + 三层情感记忆 + Live2D 二次元形象的 AI 虚拟伴侣对话系统
 >
-> 最后更新：2026-06-26 | 维护者：endme
+> 最后更新：2026-06-27 | 维护者：endme
 
 ---
 
@@ -737,9 +737,6 @@ npm run build      # 输出 → app/static/
 ---
 
 ## 13. 开发约定
-
-（保持不变）
-
 ## 14. 已知问题与债务
 
 ### P0 — 安全（生产上线前必修）
@@ -758,13 +755,14 @@ npm run build      # 输出 → app/static/
 | 5 | 新旧代码并存 | `app/` 根目录仍有旧文件，已有 16 个桥接模块 |
 | 6 | ChromaDB 和 PG 数据同步非事务 | sync_all_layers 可能不一致 |
 
-### P2 — 功能遗留（3 项，CLAUDE.md 最后更新记录）
+### P2 — 功能遗留
 
 | # | 问题 | 备注 |
 |---|------|------|
-| 7 | **Live2D 表情切换不完整** | joy 正常，sad/anger/surprise 管线贯通但视觉不可见。hiYori Free 模型参数范围有限，需商用模型验证 |
+| 7 | **Live2D 表情切换不完整** | joy 正常，sad/anger/surprise 管线贯通但视觉不可见。hiYori Free 模型参数范围有限 |
 | 8 | **测试覆盖率 ~5%** | 18 个单测 (decay_engine + event_bus)，核心模块目标 90% |
 | 9 | **LLM 流式输出** | 语音延迟 ~2-5s，文字通道 ~5s。流式可降到 <1s 首 Token |
+| 10 | **GLB 3D 模型无骨骼/BlendShape** | 混元3D 网页版生成静态 mesh，无骨骼无 morph target。Meshy 自动绑骨因贴图未嵌入 GLB 失败（尝试了 3 次）。3D 角色无口型/表情。后续：混元3D API `SubmitAutoRiggingJob`（200 免费积分） |
 
 ### 已完成的重要修复
 

@@ -8,7 +8,9 @@ import { useChatStore } from "../store/chatStore";
 import { useRoleStore } from "../store/roleStore";
 import { deleteChatHistory } from "../api/client";
 import Live2DCanvas from "../components/live2d/Live2DCanvas";
+import VRMCharacter from "../components/vrm/VRMCharacter";
 import VoiceControl from "../components/voice/VoiceControl";
+import { GLB_MODELS } from "../types/vrm";
 import type { Message } from "../types/chat";
 
 const ROLES = [
@@ -155,13 +157,17 @@ export default function ChatPage() {
         )}
       </div>
 
-      {/* Live2D 悬浮窗 */}
-      <Live2DCanvas
-        roleType={currentSession?.roleType ?? selectedRole}
-        onModelReady={(model: any) => {
-          (window as any).__live2dModel = model;
-        }}
-      />
+      {/* Live2D / VRM 双引擎悬浮窗 */}
+      {(GLB_MODELS[currentSession?.roleType ?? selectedRole ?? ""] ? (
+        <VRMCharacter roleType={currentSession?.roleType ?? selectedRole} />
+      ) : (
+        <Live2DCanvas
+          roleType={currentSession?.roleType ?? selectedRole}
+          onModelReady={(model: any) => {
+            (window as any).__live2dModel = model;
+          }}
+        />
+      ))}
     </div>
   );
 }

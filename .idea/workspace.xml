@@ -4,7 +4,20 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="386caada-63df-470c-a0c1-925864ae15ee" name="更改" comment="前端React页面重构+Live2D虚拟二次元角色陪聊实现" />
+    <list default="true" id="386caada-63df-470c-a0c1-925864ae15ee" name="更改" comment="更新.claude的setting.local.json">
+      <change beforePath="$PROJECT_DIR$/.env.example" beforeDir="false" afterPath="$PROJECT_DIR$/.env.example" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/static/assets/cubism4.es-CgmbObl9.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/static/assets/index-q7O1Gj61.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/static/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/static/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/node_modules/.package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/.package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/node_modules/.tmp/tsconfig.app.tsbuildinfo" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/node_modules/.tmp/tsconfig.app.tsbuildinfo" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/ChatPage.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/ChatPage.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/types/live2d.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/types/live2d.ts" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -63,7 +76,7 @@
     &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager&quot;: &quot;true&quot;,
     &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;develop&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/Develop/PyCharm/Projects/EchoSoul&quot;,
+    &quot;last_opened_file_path&quot;: &quot;D:/Develop/PyCharm/Projects/EchoSoul/.claude&quot;,
     &quot;list.type.of.created.stylesheet&quot;: &quot;CSS&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
@@ -80,6 +93,11 @@
     ]
   }
 }</component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\Develop\PyCharm\Projects\EchoSoul\.claude" />
+    </key>
+  </component>
   <component name="RunManager" selected="Python.run">
     <configuration name="auth_router" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="EchoSoul" />
@@ -279,6 +297,8 @@
       <workItem from="1782384876759" duration="14172000" />
       <workItem from="1782436976774" duration="33389000" />
       <workItem from="1782531136606" duration="1044000" />
+      <workItem from="1782532237368" duration="5424000" />
+      <workItem from="1782543619471" duration="1591000" />
     </task>
     <task id="LOCAL-00001" summary="项目初始化">
       <option name="closed" value="true" />
@@ -416,7 +436,31 @@
       <option name="project" value="LOCAL" />
       <updated>1782532044251</updated>
     </task>
-    <option name="localTasksCounter" value="18" />
+    <task id="LOCAL-00018" summary="更新idea缓存">
+      <option name="closed" value="true" />
+      <created>1782532438626</created>
+      <option name="number" value="00018" />
+      <option name="presentableId" value="LOCAL-00018" />
+      <option name="project" value="LOCAL" />
+      <updated>1782532438626</updated>
+    </task>
+    <task id="LOCAL-00019" summary="更新前端的node_modules">
+      <option name="closed" value="true" />
+      <created>1782532738785</created>
+      <option name="number" value="00019" />
+      <option name="presentableId" value="LOCAL-00019" />
+      <option name="project" value="LOCAL" />
+      <updated>1782532738785</updated>
+    </task>
+    <task id="LOCAL-00020" summary="更新.claude的setting.local.json">
+      <option name="closed" value="true" />
+      <created>1782533788512</created>
+      <option name="number" value="00020" />
+      <option name="presentableId" value="LOCAL-00020" />
+      <option name="project" value="LOCAL" />
+      <updated>1782533788512</updated>
+    </task>
+    <option name="localTasksCounter" value="21" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -450,7 +494,10 @@
     <MESSAGE value="情感记忆强化计算代码注释" />
     <MESSAGE value="项目架构重构" />
     <MESSAGE value="前端React页面重构+Live2D虚拟二次元角色陪聊实现" />
-    <option name="LAST_COMMIT_MESSAGE" value="前端React页面重构+Live2D虚拟二次元角色陪聊实现" />
+    <MESSAGE value="更新idea缓存" />
+    <MESSAGE value="更新前端的node_modules" />
+    <MESSAGE value="更新.claude的setting.local.json" />
+    <option name="LAST_COMMIT_MESSAGE" value="更新.claude的setting.local.json" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/EchoSoul$voice_companion_demo.coverage" NAME="voice_companion_demo 覆盖结果" MODIFIED="1782309902863" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />

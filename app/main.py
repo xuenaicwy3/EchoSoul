@@ -110,6 +110,10 @@ def create_app() -> FastAPI:
         if (_static_dir / "live2d").exists():
             app.mount("/live2d", StaticFiles(directory=str(_static_dir / "live2d")), name="live2d")
 
+        # 3D GLB 模型文件
+        if (_static_dir / "glb").exists():
+            app.mount("/glb", StaticFiles(directory=str(_static_dir / "glb")), name="glb")
+
         # 所有前端页面路由 → 返回 React index.html
         spa = lambda: FileResponse(str(_index_html))
         app.add_api_route("/", spa, methods=["GET"], include_in_schema=False)

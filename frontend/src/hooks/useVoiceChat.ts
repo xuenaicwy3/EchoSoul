@@ -75,6 +75,9 @@ export function useVoiceChat(): VoiceState & {
                "ParamBrowLAngle","ParamBrowRAngle","ParamMouthForm","ParamCheek",
                "ParamEyeLOpen","ParamEyeROpen"].forEach(p => core.setParameterValueById(p, 0));
             }
+            // GLB 闭嘴
+            const jaw = (window as any).__glbJawBone;
+            if (jaw) { jaw.rotation.x = 0; }
           } catch { /* */ }
         }
 
@@ -88,18 +91,19 @@ export function useVoiceChat(): VoiceState & {
             (volume: number) => {
               // 商业级 Lip-Sync: Power Curve + Lerp + 参数范围校准
               try {
-                const model = (window as any).__live2dModel;
-                const core = model?.internalModel?.coreModel;
-                if (!core) return;
-                // 1. Power Curve: 幂函数拉高低音区细节
                 const boosted = Math.pow(Math.min(1, volume * 3), 0.7);
-                // 2. Lerp 平滑
                 const current = (window as any).__mouthCurrent || 0;
                 const smoothed = current + (boosted - current) * 0.4;
                 (window as any).__mouthCurrent = smoothed;
-                // 3. Live2D 参数范围 0~2（非 0~1），大幅张嘴
-                core.setParameterValueById("ParamMouthOpenY", smoothed * 2);
-              } catch { /* ignore */ }
+                // Live2D 口型
+                try {
+                  const core = (window as any).__live2dModel?.internalModel?.coreModel;
+                  if (core) { core.setParameterValueById("ParamMouthOpenY", smoothed * 2); return; }
+                } catch { /* */ }
+                // GLB 3D 口型: 旋转下巴骨骼
+                const jaw = (window as any).__glbJawBone;
+                if (jaw) { jaw.rotation.x = -(smoothed * 0.5); }
+              } catch { /* */ }
             },
             (exprs: number[]) => {
               const idx = exprs[0] ?? 4;
