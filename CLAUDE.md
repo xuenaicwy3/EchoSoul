@@ -11,9 +11,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # EchoSoul — 心流虚拟伴侣
 
-> 基于 LangGraph + 三层情感记忆 + Live2D 二次元形象的 AI 虚拟伴侣对话系统
+> 基于 LangGraph + 三层情感记忆 + Live2D / VRM 3D 二次元形象的 AI 虚拟伴侣对话系统
 >
-> 最后更新：2026-06-27 | 维护者：endme
+> 最后更新：2026-06-28 | 维护者：endme
 
 ---
 
@@ -41,7 +41,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 EchoSoul 是一个 AI 虚拟伴侣对话系统。核心能力：
 
 - **多角色对话**：8 个预设角色（日系动漫/高冷御姐/傲娇辣妹/甜美校花/软萌可爱/温柔贤淑/元气少女/清冷仙气），每个角色独立人设、说话风格、开场白
-- **Live2D 二次元形象**：每个角色配 Live2D 模型，支持表情驱动、口型同步、视线追踪、动作触发
+- **Live2D / VRM 3D 双引擎形象**：4 个角色用 Live2D（hiYori/miku Cubism 模型），4 个角色用 VRM 3D（VRoid Studio 模型，带 52 个 ARKit BlendShape），均支持口型同步、表情驱动
 - **实时语音对话**：用户可直接与 AI 角色语音聊天，低延迟 (<2s)，支持语音打断、双向自然对话
 - **三层情感记忆**：事实层（用户个人信息）+ 情感层（情绪记录）+ 关系层（里程碑），基于艾宾浩斯遗忘曲线自动衰减
 - **好感度养成**：四维（亲密度/信任度/趣味度/成长度），对话中自动增减，长时间不互动衰减
@@ -89,6 +89,8 @@ EchoSoul 是一个 AI 虚拟伴侣对话系统。核心能力：
 | React Router | 7.x | SPA 路由 |
 | pixi.js | 8.x | WebGL 渲染引擎 |
 | @pixi/live2d-display-cubism4 | — | Live2D Cubism 4 模型渲染 |
+| three.js | 0.x | 3D 渲染引擎 |
+| @pixiv/three-vrm | 3.x | VRM 3D 角色加载/BlendShape/自动眨眼 |
 | @ricky0123/vad-web | — | 浏览器端语音活动检测 (VAD) |
 | Web Audio API | — | 音频采集/播放 |
 | MediaRecorder API | — | 麦克风录音 |
@@ -762,7 +764,7 @@ npm run build      # 输出 → app/static/
 | 7 | **Live2D 表情切换不完整** | joy 正常，sad/anger/surprise 管线贯通但视觉不可见。hiYori Free 模型参数范围有限 |
 | 8 | **测试覆盖率 ~5%** | 18 个单测 (decay_engine + event_bus)，核心模块目标 90% |
 | 9 | **LLM 流式输出** | 语音延迟 ~2-5s，文字通道 ~5s。流式可降到 <1s 首 Token |
-| 10 | **GLB 3D 模型无骨骼/BlendShape** | 混元3D 网页版生成静态 mesh，无骨骼无 morph target。Meshy 自动绑骨因贴图未嵌入 GLB 失败（尝试了 3 次）。3D 角色无口型/表情。后续：混元3D API `SubmitAutoRiggingJob`（200 免费积分） |
+| 10 | **VRM 角色手臂姿势需手动校正** | VRoid Studio 导出默认 T-pose（手臂水平）。代码通过 J_Bip raw bone + `autoUpdateHumanBones=false` 将手臂从水平转至自然下垂（~30°），手指内弯。临时方案，后续可调 VRoid Studio 姿态后重新导出 |
 
 ### 已完成的重要修复
 

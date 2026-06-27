@@ -75,9 +75,11 @@ export function useVoiceChat(): VoiceState & {
                "ParamBrowLAngle","ParamBrowRAngle","ParamMouthForm","ParamCheek",
                "ParamEyeLOpen","ParamEyeROpen"].forEach(p => core.setParameterValueById(p, 0));
             }
-            // GLB 闭嘴
-            const jaw = (window as any).__glbJawBone;
-            if (jaw) { jaw.rotation.x = 0; }
+            // VRM 闭嘴 + 中性表情
+            const vrm = (window as any).__vrmModel;
+            if (vrm?.expressionManager) {
+              ["aa","ih","ou","ee","oh","happy","sad","surprised","angry"].forEach(n => vrm.expressionManager.setValue(n, 0));
+            }
           } catch { /* */ }
         }
 
@@ -100,15 +102,33 @@ export function useVoiceChat(): VoiceState & {
                   const core = (window as any).__live2dModel?.internalModel?.coreModel;
                   if (core) { core.setParameterValueById("ParamMouthOpenY", smoothed * 2); return; }
                 } catch { /* */ }
-                // GLB 3D 口型: 旋转下巴骨骼
-                const jaw = (window as any).__glbJawBone;
-                if (jaw) { jaw.rotation.x = -(smoothed * 0.5); }
+                // VRM 3D 口型: BlendShape Aa (张嘴)
+                try {
+                  const vrm = (window as any).__vrmModel;
+                  if (vrm?.expressionManager) {
+                    const val = smoothed * 0.8;
+                    vrm.expressionManager.setValue("aa", val);
+                    vrm.expressionManager.setValue("ih", val * 0.3);
+                    vrm.expressionManager.setValue("ou", val * 0.3);
+                  }
+                } catch { /* */ }
               } catch { /* */ }
             },
             (exprs: number[]) => {
               const idx = exprs[0] ?? 4;
-              console.log("[Expr] set expression index:", idx);
+              // Live2D 表情
               setLive2DExpression(idx);
+              // VRM 表情: BlendShape 预设名
+              try {
+                const vrm = (window as any).__vrmModel;
+                if (vrm?.expressionManager) {
+                  const names = ["happy", "sad", "surprised", "angry", "neutral"];
+                  names.forEach(n => vrm.expressionManager.setValue(n, 0));
+                  const name = names[idx] || "neutral";
+                  vrm.expressionManager.setValue(name, 1);
+                  console.log("[Expr] VRM expression:", name);
+                }
+              } catch { /* */ }
             },
           );
         }

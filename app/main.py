@@ -113,6 +113,9 @@ def create_app() -> FastAPI:
         # 3D GLB 模型文件
         if (_static_dir / "glb").exists():
             app.mount("/glb", StaticFiles(directory=str(_static_dir / "glb")), name="glb")
+        # VRM 模型文件
+        if (_static_dir / "vrm").exists():
+            app.mount("/vrm", StaticFiles(directory=str(_static_dir / "vrm")), name="vrm")
 
         # 所有前端页面路由 → 返回 React index.html
         spa = lambda: FileResponse(str(_index_html))
