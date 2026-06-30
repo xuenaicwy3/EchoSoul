@@ -214,20 +214,97 @@ async def handle_milestone_check(event: Dict[str, Any]) -> None:
 
 @bus.on("chat.completed")
 async def handle_websocket_push(event: Dict[str, Any]) -> None:
-    """通过 WebSocket 推送 AI 回复。"""
+    """通过 WebSocket 推送 AI 回复（含工具执行摘要）。"""
     if not settings.USE_WEBSOCKET:
         return
 
     try:
-        await manager.send_personal_message(event["user_id"], {
+        message = {
             "type": "chat_reply",
             "task_id": event.get("task_id"),
             "reply": event.get("ai_reply", ""),
             "emotion": event.get("emotion", {}),
-        })
+        }
+
+        # 附加工具执行信息
+        tool_execs = event.get("tool_executions", [])
+        if tool_execs:
+            message["tools"] = [
+                {
+                    "name": t.get("tool_name", ""),
+                    "result_preview": str(t.get("result_preview", ""))[:200],
+                    "success": t.get("success", True),
+                }
+                for t in tool_execs
+            ]
+
+        await manager.send_personal_message(event["user_id"], message)
         logger.info("WebSocket 推送成功: user=%s", event["user_id"][:8])
     except Exception as e:
         logger.error("WebSocket 推送失败: %s", e)
+
+
+# ==================== 工具可观测性 Handlers ====================
+
+
+@bus.on("tool.called")
+async def handle_tool_logging(event: Dict[str, Any]) -> None:
+    """工具执行日志 → Redis 循环缓冲区（最后 100 条/用户，24h TTL）。"""
+    tool_name = event.get("tool_name", "")
+    success = event.get("success", False)
+    duration_ms = event.get("duration_ms", 0)
+    user_id = event.get("user_id", "")
+
+    logger.info(
+        "[Tool] %s: success=%s duration=%dms user=%s",
+        tool_name, success, duration_ms, user_id[:8] if user_id else "?",
+    )
+
+    try:
+        r = get_redis_client()
+        if r and user_id:
+            import json as _json
+            from datetime import datetime as _dt
+            key = f"tool_history:{user_id}"
+            entry = _json.dumps({
+                "tool": tool_name,
+                "success": success,
+                "duration_ms": duration_ms,
+                "timestamp": _dt.utcnow().isoformat(),
+            }, ensure_ascii=False)
+            await r.lpush(key, entry)
+            await r.ltrim(key, 0, 99)
+            await r.expire(key, 86400)
+    except Exception as e:
+        logger.debug("工具日志写入 Redis 失败: %s", e)
+
+
+@bus.on("skill.activated")
+async def handle_skill_activation(event: Dict[str, Any]) -> None:
+    """技能激活日志。"""
+    skill_name = event.get("skill_name", "")
+    user_id = event.get("user_id", "")
+    logger.info("[Skill] 已激活: %s, user=%s", skill_name, user_id[:8] if user_id else "?")
+
+
+@bus.on("mcp.error")
+async def handle_mcp_error(event: Dict[str, Any]) -> None:
+    """MCP 异常告警。"""
+    server = event.get("server_name", "unknown")
+    error = event.get("error", "")
+    logger.error("[MCP] 服务器 '%s' 异常: %s", server, error)
+
+
+@bus.on("interrupt.triggered")
+async def handle_interrupt_log(event: Dict[str, Any]) -> None:
+    """中断触发日志。"""
+    user_id = event.get("user_id", "")
+    tools = event.get("sensitive_tools", [])
+    logger.info(
+        "[Interrupt] 暂停等待审批: user=%s tools=%s",
+        user_id[:8] if user_id else "?",
+        [t.get("name") for t in tools],
+    )
 
 
 @bus.on("chat.completed")

@@ -74,6 +74,19 @@ class Settings(BaseSettings):
     # ---------- 测试模式 ----------
     TEST_MODE: bool = False
 
+    # ---------- Function Calling / 工具调用 ----------
+    MAX_TOOL_ITERATIONS: int = 5
+    TOOL_LLM_TEMPERATURE: float = 0.7
+    TOOL_LLM_MAX_TOKENS: int = 1024
+
+    # ---------- Skills ----------
+    SKILLS_DIR: str = "./skills"
+    ENABLE_SKILLS: bool = False
+
+    # ---------- MCP ----------
+    MCP_CONFIG_PATH: str = "./mcp_servers.json"
+    ENABLE_MCP: bool = False
+
     model_config = {
         "env_file": ".env",
         "extra": "ignore",

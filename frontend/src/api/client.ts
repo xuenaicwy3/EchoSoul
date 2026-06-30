@@ -52,6 +52,90 @@ export async function getChatResult(taskId: string) {
   return res.data;
 }
 
+// ---- SSE 流式对话 ----
+
+export interface StreamCallbacks {
+  onToken: (token: string) => void;
+  onInterrupt?: (data: { message: string; thread_id: string; sensitive_tools?: { name: string }[] }) => void;
+  onFinal: (data: { reply: string; emotion: any; role?: string; tools?: any[] }) => void;
+  onError: (message: string) => void;
+}
+
+export function streamChat(
+  message: string,
+  roleType: string | undefined,
+  callbacks: StreamCallbacks,
+): AbortController {
+  const controller = new AbortController();
+  const token = localStorage.getItem("echosoul_token");
+
+  console.log("[SSE] streaming start...");
+  fetch("/chat/stream", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ message, role_type: roleType }),
+    signal: controller.signal,
+  }).then(async (response) => {
+    if (!response.ok) {
+      callbacks.onError(`HTTP ${response.status}`);
+      return;
+    }
+    const reader = response.body?.getReader();
+    if (!reader) {
+      callbacks.onError("Response body is not readable");
+      return;
+    }
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      // Parse SSE events: "event: xxx\ndata: {...}\n\n"
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || ""; // keep incomplete line in buffer
+
+      let currentEvent = "";
+      for (const line of lines) {
+        if (line.startsWith("event: ")) {
+          currentEvent = line.slice(7).trim();
+        } else if (line.startsWith("data: ")) {
+          const dataStr = line.slice(6);
+          try {
+            const data = JSON.parse(dataStr);
+            if (currentEvent === "token") {
+              callbacks.onToken(data.content || "");
+            } else if (currentEvent === "interrupt") {
+              callbacks.onInterrupt?.(data);
+              controller.abort();  // 中断后停止读取
+              return;
+            } else if (currentEvent === "final") {
+              callbacks.onFinal(data);
+              return;  // 完成后停止读取
+            } else if (currentEvent === "error") {
+              callbacks.onError(data.message || "Unknown error");
+              return;
+            }
+          } catch {
+            // skip unparseable lines
+          }
+        }
+      }
+    }
+  }).catch((err) => {
+    if (err.name !== "AbortError") {
+      callbacks.onError(err.message);
+    }
+  });
+
+  return controller;
+}
+
 export async function getAffection(roleType: string) {
   const res = await client.get(`/affection/${roleType}`);
   return res.data;

@@ -16,7 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from app.api.deps import auth_deps
 from app.api.middleware import register_middleware
 from app.api.error_handlers import register_error_handlers
-from app.api.routers import chat, ws, voice
+from app.api.routers import chat, chat_stream, ws, voice
 from app.core.config import get_settings
 from app.core.logging_config import setup_logging
 from app.infrastructure.database import init_db, close_db
@@ -40,30 +40,33 @@ _static_dir = Path(__file__).parent / "static"
 # 模块级调度器实例
 proactive_scheduler = ProactiveScheduler(settings, AffectionService())
 
-# 后处理 Stream Consumer task（在 lifespan 中启动后赋值）
+# 后台任务引用
 _postprocess_task: asyncio.Task | None = None
+_mcp_manager = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理。"""
-    global _postprocess_task
+    global _postprocess_task, _mcp_manager
 
-    # 启动
+    # ---- 启动 ----
     await init_db(settings)
     await init_redis(settings)
 
     game_svc = GameService(settings)
     await game_svc.init_game_data()
 
-    # 启动后处理 Stream Consumer（Celery → EventBus 桥接）
+    # 启动后处理 Stream Consumer
     from app.workers.postprocess import run_postprocess_consumer
     _postprocess_task = asyncio.create_task(run_postprocess_consumer())
 
+    # MCP 生命周期由 Celery Worker 中的 AgentHarness 管理，不在此处启动
     proactive_scheduler.start()
-    logger.info("所有后台服务已启动")
+    logger.info("所有后台服务已启动 (Harness 架构)")
     yield
-    # 关闭
+
+    # ---- 关闭 ----
     if _postprocess_task:
         _postprocess_task.cancel()
     proactive_scheduler.shutdown()
@@ -84,6 +87,7 @@ def create_app() -> FastAPI:
 
     # ---- API 路由（需要认证） ----
     app.include_router(chat.router, dependencies=auth_deps)
+    app.include_router(chat_stream.router, dependencies=auth_deps)
 
     # WebSocket 路由
     app.include_router(ws.router)

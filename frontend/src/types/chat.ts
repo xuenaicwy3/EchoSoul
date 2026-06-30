@@ -22,10 +22,11 @@ export interface AffectionResponse {
 }
 
 export interface Message {
-  id: string;        // message_id or task_id for dedup
+  id: string;
   sender: "user" | "ai";
   text: string;
   timestamp: string;
-  task_id?: string;  // Celery task_id for dedup (AI messages only)
+  task_id?: string;
   emotion?: { label: string; score: number };
+  isStreaming?: boolean;  // SSE 流式中标记
 }

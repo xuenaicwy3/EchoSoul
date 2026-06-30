@@ -14,8 +14,8 @@ from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-_client: HttpClient | None = None
-_collections: Tuple[Collection, Collection, Collection] | None = None
+_client = None  # type: ignore[valid-type]
+_collections = None
 
 
 def get_chroma_client() -> HttpClient:

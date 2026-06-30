@@ -12,6 +12,8 @@ interface ChatState {
   sessions: Session[];
   activeSessionId: string | null;
   isLoading: boolean;
+  isStreaming: boolean;
+  pendingInterrupt: { thread_id: string; sensitive_tools: { name: string }[]; message: string } | null;
   affection: AffectionResponse | null;
 
   addSession: (roleType: string) => string;
@@ -20,8 +22,12 @@ interface ChatState {
   activeSession: () => Session | undefined;
 
   addMessage: (msg: Message) => void;
+  appendToLastAiMessage: (text: string) => string;  // 返回消息 id
+  finalizeLastAiMessage: (emotion?: any) => void;
   setMessages: (msgs: Message[]) => void;
   setLoading: (v: boolean) => void;
+  setStreaming: (v: boolean) => void;
+  setPendingInterrupt: (data: { thread_id: string; sensitive_tools: { name: string }[]; message: string } | null) => void;
   setAffection: (aff: AffectionResponse) => void;
 }
 
@@ -29,6 +35,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   sessions: [],
   activeSessionId: null,
   isLoading: false,
+  isStreaming: false,
+  pendingInterrupt: null,
   affection: null,
 
   addSession: (roleType: string) => {
@@ -95,7 +103,61 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }));
   },
 
+  // SSE 流式：追加 token 到当前 AI 消息末尾
+  appendToLastAiMessage: (text: string) => {
+    const activeId = get().activeSessionId;
+    if (!activeId) return "";
+    let msgId = "";
+    set((s) => ({
+      sessions: s.sessions.map((sess) => {
+        if (sess.id !== activeId) return sess;
+        const msgs = [...sess.messages];
+        const last = msgs[msgs.length - 1];
+        if (last && last.sender === "ai" && last.isStreaming) {
+          // 追加到现有流式消息
+          last.text += text;
+          msgId = last.id;
+        } else {
+          // 创建新的流式消息
+          const newMsg: Message = {
+            id: crypto.randomUUID(),
+            sender: "ai",
+            text: text,
+            timestamp: new Date().toISOString(),
+            isStreaming: true,
+          };
+          msgs.push(newMsg);
+          msgId = newMsg.id;
+        }
+        return { ...sess, messages: msgs };
+      }),
+    }));
+    return msgId;
+  },
+
+  // SSE 流式：标记 AI 消息完成
+  finalizeLastAiMessage: (emotion?: any) => {
+    const activeId = get().activeSessionId;
+    if (!activeId) return;
+    set((s) => ({
+      sessions: s.sessions.map((sess) => {
+        if (sess.id !== activeId) return sess;
+        const msgs = [...sess.messages];
+        const last = msgs[msgs.length - 1];
+        if (last && last.sender === "ai") {
+          last.isStreaming = false;
+          if (emotion) last.emotion = emotion;
+        }
+        return { ...sess, messages: msgs };
+      }),
+    }));
+  },
+
   setLoading: (v: boolean) => set({ isLoading: v }),
+
+  setStreaming: (v: boolean) => set({ isStreaming: v }),
+
+  setPendingInterrupt: (data) => set({ pendingInterrupt: data }),
 
   setAffection: (aff: AffectionResponse) => set({ affection: aff }),
 }));

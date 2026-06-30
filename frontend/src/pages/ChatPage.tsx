@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import ChatWindow from "../components/chat/ChatWindow";
 import ChatInput from "../components/chat/ChatInput";
+import InterruptCard from "../components/chat/InterruptCard";
 import { useChat } from "../hooks/useChat";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { useChatStore } from "../store/chatStore";
@@ -168,6 +169,7 @@ export default function ChatPage() {
           }}
         />
       ))}
+      <InterruptCard />
     </div>
   );
 }

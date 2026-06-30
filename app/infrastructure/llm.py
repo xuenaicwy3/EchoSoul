@@ -52,3 +52,22 @@ def create_router_model() -> "BaseChatModel":
 def create_proactive_model() -> "BaseChatModel":
     """创建主动消息生成用 LLM（高温度、默认 token）。"""
     return create_chat_model(temperature=0.75)
+
+
+def create_tool_llm(model: Optional[str] = None) -> "BaseChatModel":
+    """创建支持 Function Calling 的 LLM 实例（用于 ReAct Agent）。
+
+    与 create_chat_model 的区别：
+      - 更高 max_tokens（1024），给工具调用 + 回复留足空间
+      - 适中 temperature（0.7），平衡创造力与工具调用准确性
+      - 返回的实例支持 .bind_tools()
+
+    Args:
+        model: 模型名称，默认使用 Settings.LLM_MODEL。
+    """
+    settings = get_settings()
+    return create_chat_model(
+        temperature=settings.TOOL_LLM_TEMPERATURE,
+        max_tokens=settings.TOOL_LLM_MAX_TOKENS,
+        model=model,
+    )

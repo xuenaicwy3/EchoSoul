@@ -25,6 +25,15 @@ def register_middleware(app: FastAPI) -> None:
         allow_headers=["*"],
     )
 
+    # 禁止浏览器缓存构建产物 + index.html
+    @app.middleware("http")
+    async def no_cache_assets(request: Request, call_next):
+        response = await call_next(request)
+        path = request.url.path
+        if path.startswith("/assets/") or path.endswith(".js") or path.endswith(".css") or path == "/" or path in ("/chat", "/home", "/game", "/story", "/memory", "/login", "/register"):
+            response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        return response
+
     # Request ID + Timing（可选）
     @app.middleware("http")
     async def add_request_id(request: Request, call_next):

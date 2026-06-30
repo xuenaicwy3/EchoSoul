@@ -86,8 +86,7 @@ export function useVoiceChat(): VoiceState & {
         if (msg.type === "audio-chunk" && msg.audio) {
           setIsSpeaking(true);
           startVADMonitor(); // AI 说话时后台监听用户声音
-          stop(); // stop previous playback
-          // Play audio with lip-sync volumes
+          // Play audio with lip-sync volumes（播放器自动排队，不打断）
           play(
             msg as any,
             (volume: number) => {

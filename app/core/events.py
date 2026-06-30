@@ -75,3 +75,12 @@ class EventBus:
 
 # 全局单例 — 所有模块共享此实例
 bus = EventBus()
+
+# 事件类型常量
+EVENT_CHAT_COMPLETED = "chat.completed"
+EVENT_TOOL_CALLED = "tool.called"
+EVENT_TOOL_ERROR = "tool.error"
+EVENT_SKILL_ACTIVATED = "skill.activated"
+EVENT_MCP_CONNECTED = "mcp.connected"
+EVENT_MCP_ERROR = "mcp.error"
+EVENT_INTERRUPT_TRIGGERED = "interrupt.triggered"

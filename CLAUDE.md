@@ -9,6 +9,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ---
 
+## 动态信息索引
+以下内容频繁更新，不写入本文件以保持缓存稳定。需要时请使用 `read` 工具读取对应文件：
+| 内容 | 文件路径 |
+|---|---|
+| AI虚拟主播进展 | `docs/ai_avatar.md` |
+| 项目变更与修复记录 | `CHANGELOG.md` |
+| 当前迭代计划 | `docs/todo.md` |
+| 架构演进记录（含ADR）| `docs/adr.md` |
+| 已知问题与债务 | `docs/debt.md` |
+
+---
+
 # EchoSoul — 心流虚拟伴侣
 
 > 基于 LangGraph + 三层情感记忆 + Live2D / VRM 3D 二次元形象的 AI 虚拟伴侣对话系统
@@ -738,67 +750,5 @@ npm run build      # 输出 → app/static/
 ## 13. 开发约定
 ## 14. 已知问题与债务
 
-### P0 — 安全（生产上线前必修）
+> 详细变更记录请查看 [docs/debt.md](docs/debt.md)
 
-| # | 问题 | 影响 |
-|---|------|------|
-| 1 | `.env` API Key 泄露到 Git 历史 | 阿里云后台更换所有 Key |
-| 2 | `SECRET_KEY` 使用默认值 | 更换随机 256-bit 字符串 |
-| 3 | CORS `allow_origins=["*"]` | 限制前端域名白名单 |
-
-### P1 — 架构债务（下个迭代）
-
-| # | 问题 | 状态 |
-|---|------|------|
-| 4 | 无 Alembic 数据库迁移 | 表结构变更靠 `_ensure_*()` 运行时检查，不可版本化 |
-| 5 | 新旧代码并存 | `app/` 根目录仍有旧文件，已有 16 个桥接模块 |
-| 6 | ChromaDB 和 PG 数据同步非事务 | sync_all_layers 可能不一致 |
-
-### P2 — 功能遗留
-
-| # | 问题 | 备注 |
-|---|------|------|
-| 7 | **Live2D 表情切换不完整** | joy 正常，sad/anger/surprise 管线贯通但视觉不可见。hiYori Free 模型参数范围有限 |
-| 8 | **测试覆盖率 ~5%** | 18 个单测 (decay_engine + event_bus)，核心模块目标 90% |
-| 9 | **LLM 流式输出** | 语音延迟 ~2-5s，文字通道 ~5s。流式可降到 <1s 首 Token |
-| 10 | **VRM 角色手臂姿势需手动校正** | VRoid Studio 导出默认 T-pose（手臂水平）。代码通过 J_Bip raw bone + `autoUpdateHumanBones=false` 将手臂从水平转至自然下垂（~30°），手指内弯。临时方案，后续可调 VRoid Studio 姿态后重新导出 |
-
-### 已完成的重要修复
-
-| # | 问题 | 解决方案 |
-|---|------|---------|
-| ✅ | React DOM 与 PIXI WebGL 冲突 | PIXI 自管 canvas，React 管 div 容器 |
-| ✅ | pixi-live2d-display-lipsyncpatch 不兼容 Cubism 3.1 | 回退 pixi-live2d-display@0.4.0 原版 |
-| ✅ | Cubism Core 加载时序 | index.html `<script>` 同步加载 CDN |
-| ✅ | Celery 被错误移除导致阻塞 | ADR-3 修正，恢复 Celery + EventBus 混合 |
-| ✅ | miku_pro 模型无法渲染 | 确认 pixi-live2d-display@0.4.0 兼容 Cubism5 |
-| ✅ | CosyVoice V2 废弃 GET 错误 | 切换 cosyvoice-v3-flash + _v3 音色 |
-| ✅ | TTS 音频不播放 | useAudioPlayer AudioContext 解码 WAV base64 |
-| ✅ | 口型太小声 | Power Curve + Lerp 平滑 + 参数范围 x2 |
-
-
-## AI 虚拟主播（基础版已完成 ✅）
-
-```
-B站直播间弹幕 → bilibili-api LiveDanmaku(WebSocket)
-  → DeepSeek LLM 生成口语化简短回复
-  → LiveRoom.send_danmaku() 发回直播间
-```
-
-**已实现文件**：
-- `workers/bilibili_listener.py` — 弹幕监听 + LLM 回复 + 弹幕发送（一个文件搞定）
-- `workers/live_room.py` — 直播间操作封装（发弹幕/查信息）
-
-**启动**：
-```bash
-pip install bilibili-api-python
-python -m app.workers.bilibili_listener --room-id 你的房间号
-```
-
-**待完善**：
-- OBS 推流配置（装 OBS → 浏览器源 → B站 RTMP）
-- 礼物/SC/舰长互动
-- 主动说话（无人发弹幕时 AI 找话题）
-- 弹幕飘过动画（前端 LiveRoomPage.tsx）
-
----

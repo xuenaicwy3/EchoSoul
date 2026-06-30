@@ -29,6 +29,8 @@ class ChatTaskPayload(BaseModel):
     unlock_info: str = ""
     thread_id: str
     need_regenerate: bool = False
+    enable_tools: bool = False  # 是否启用工具调用
+    active_skills: list = Field(default_factory=list)  # 预激活的技能名列表
 
 
 # ==================== 类型安全的调用函数 ====================
