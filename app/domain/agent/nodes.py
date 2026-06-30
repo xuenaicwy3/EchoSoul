@@ -203,9 +203,9 @@ def router_node(state: AgentState, emotion_svc: EmotionService,
 
     # LLM + tools
     all_tools = tool_registry.get_all_tools()
-    llm = _get_tool_llm()
+    llm = _get_tool_llm()  # 创建支持 Function Calling 的 LLM 实例
     if all_tools:
-        llm = llm.bind_tools(all_tools)
+        llm = llm.bind_tools(all_tools)  # 绑到 LLM 上
 
     # 流式调用 LLM，逐 token 产出，累积为完整 AIMessage
     # stream() 使上层 graph.astream_events() 能捕获 on_chat_model_stream 事件

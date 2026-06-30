@@ -107,16 +107,16 @@ def _build_context(task_payload: dict) -> HarnessContext:
     relationship = RelationshipContext()
     try:
         from app.domain.affection.service import AffectionService
-        aff_svc = AffectionService()
+        aff_svc = AffectionService() # 好感度服务
         import asyncio
-        aff = asyncio.run(aff_svc.get(user_id, role_type))
+        aff = asyncio.run(aff_svc.get(user_id, role_type)) # 查询当前好感度四维
         unlocks = asyncio.run(aff_svc.get_unlock_state(user_id, role_type))
         relationship = RelationshipContext(
-            intimacy=aff.get("intimacy", 10),
-            trust=aff.get("trust", 10),
-            fun=aff.get("fun", 10),
-            growth=aff.get("growth", 10),
-            level=unlocks.get("level", 0),
+            intimacy=aff.get("intimacy", 10), # 亲密度
+            trust=aff.get("trust", 10),  # 信任
+            fun=aff.get("fun", 10),  # 趣味
+            growth=aff.get("growth", 10), # 成长
+            level=unlocks.get("level", 0), # 关系等级
             style_modifier=unlocks.get("style_modifier", ""),
             story_unlocked=unlocks.get("story_unlocked", False),
         )

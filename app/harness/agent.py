@@ -123,14 +123,14 @@ class AgentHarness:
 
             self.mcp_manager = MCPClientManager(self.settings.MCP_CONFIG_PATH)
             loop = asyncio.new_event_loop()
-            connected = loop.run_until_complete(self.mcp_manager.connect())
+            connected = loop.run_until_complete(self.mcp_manager.connect())   # 连外部 MCP 服务器
             loop.close()
 
             if connected:
                 mcp_tools = self.mcp_manager.get_mcp_tools()
                 adapters = adapt_mcp_tools(mcp_tools)
                 for a in adapters:
-                    self.tool_registry.register_mcp(a)
+                    self.tool_registry.register_mcp(a)  # 注入工具池
                 logger.info("[Harness] MCP 层: %d 个外部工具", len(adapters))
             else:
                 logger.info("[Harness] MCP 层: 未连接")
@@ -191,7 +191,7 @@ class AgentHarness:
         if not self._setup_done:
             self.setup()
 
-        state = self.build_state(context)
+        state = self.build_state(context) # 构建 AgentState 状态字典
         thread_id = thread_id or context.session.user_id
         config = {"configurable": {"thread_id": thread_id}}
 
