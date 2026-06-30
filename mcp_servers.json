@@ -1,0 +1,19 @@
+{
+  "companion-memory": {
+    "transport": "stdio",
+    "command": "python",
+    "args": ["-m", "mcp_servers.companion_memory"],
+    "env": {
+      "DATABASE_URL": "postgresql+asyncpg://echosoul:123456@localhost:5432/echosoul",
+      "CHROMA_PATH": "./chroma_data"
+    }
+  },
+  "emotion-engine": {
+    "transport": "stdio",
+    "command": "python",
+    "args": ["-m", "mcp_servers.emotion_engine"],
+    "env": {
+      "DASHSCOPE_API_KEY": "${DASHSCOPE_API_KEY}"
+    }
+  }
+}
